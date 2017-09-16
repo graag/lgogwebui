@@ -1,0 +1,24 @@
+<html>
+<link rel="stylesheet" href="/static/css/lgogui.css" />
+<link rel="stylesheet" type="text/css" href="//fonts.googleapis.com/css?family=Lato" />
+<link rel="stylesheet" href="/static/css/font-awesome.min.css">
+<body>
+    {% for game in data %}
+    <div class="game">
+        <a href="https://www.gog.com/game/{{ game.gamename }}">
+        <div class="icon"><img class="icon" src="https://www.gog.com/{{ game.icon }}" alt=""></div>
+        <div class="link">{{ game.title }}</div>
+        </a>
+        <div class="search"><a href="https://www.gog.com/games?search={{ game.title }}"><i class="fa fa-search" aria-hidden="true"></i><a/></div>
+        {% if game.download > 0 %}
+        <div class="check"><a href="/gog-repo/{{ game.gamename }}"><i class="fa fa-check-square-o" aria-hidden="true"></i></a></div>
+        {% elif game.download == 0 %}
+        <div class="check"><i class="fa fa-spinner" aria-hidden="true"></i></div>
+        {% else %}
+        <div class="check"><a href="/gog/download/{{ game.gamename }}"><i class="fa fa-download" aria-hidden="true"></i></a></div>
+        {% endif %}
+        <!--<div class="check"><a href="/gog/download/{{ game.gamename }}"><i class="fa fa-refresh" aria-hidden="true"></i></a></div>-->
+    </div>
+    {% endfor %}
+</body>
+</html>
