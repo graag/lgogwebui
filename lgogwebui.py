@@ -12,7 +12,7 @@ from sqlalchemy.orm.exc import NoResultFound
 #logging.getLogger('sqlalchemy.engine').setLevel(logging.INFO)
 
 app = Flask(__name__)
-index = AutoIndex(app, add_url_rules=False)
+index = AutoIndex(app, config.lgog_library, add_url_rules=False)
 
 @app.before_first_request
 def setup_logging():
@@ -123,14 +123,14 @@ def download(game):
         db_game.name = game
         db_game.state = Status.new
         db_game.platform = _available
-        db_game.progress = 0
         session.add(db_game)
         app.logger.debug("Adding game %s to the DB.", game)
     if db_game.state != Status.running:
         db_game.state = Status.queued
+        db_game.progress = 0
         session.commit()
     return redirect(url_for('library')+"/#"+game)
 
-@app.route('/gog-repo/<path:file>')
-def browse(file):
-    return index.render_autoindex(file, browse_root=config.lgog_library)
+@app.route('/gog-repo/<path:path>')
+def browse(path):
+    return index.render_autoindex(path, endpoint='.browse')
