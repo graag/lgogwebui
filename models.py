@@ -2,6 +2,7 @@
 
 import logging
 import enum
+import config
 
 from sqlalchemy import Column, ForeignKey, Integer, String, Enum
 from sqlalchemy.ext.declarative import declarative_base
@@ -28,7 +29,7 @@ class Game(Base):
 
 # Create an engine that stores data in the local directory's
 # sqlalchemy_example.db file.
-engine = create_engine('sqlite:///lgog-daemon.db')
+engine = create_engine("sqlite:///%s" % config.database_name)
 
 # Bind the engine to the metadata of the Base class so that the
 # declaratives can be accessed through a DBSession instance
