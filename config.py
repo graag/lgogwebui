@@ -3,9 +3,9 @@
 import os
 
 #: Path to lgogdownloader config
-lgog_config = os.path.realpath(os.environ.get("LGOG_CONFIG", "~/.config/lgogdownloader"))
+lgog_config = os.path.expanduser(os.environ.get("LGOG_CONFIG", "~/.config/lgogdownloader"))
 #: Path to lgogdownloader cache
-lgog_cache = os.path.realpath(os.environ.get("LGOG_CACHE", "~/.cache/lgogdownloader"))
+lgog_cache = os.path.expanduser(os.environ.get("LGOG_CACHE", "~/.cache/lgogdownloader"))
 #: Path to GOG game library
-lgog_library = os.path.realpath(os.environ.get("GOG_DIR", "~/GOG"))
+lgog_library = os.path.expanduser(os.environ.get("GOG_DIR", "~/GOG"))
 
