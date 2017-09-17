@@ -2,16 +2,14 @@
 
 import json
 import os
+import config
 from models import Game, Status, session
 from flask import Flask, render_template, redirect, url_for
 app = Flask(__name__)
 
-lib_dir = '/opt/gog-repo'
-lgog_cache = '/opt/lgogdownloader'
-
 @app.route('/')
 def library():
-    with open(os.path.join(lgog_cache, 'gamedetails.json')) as f:
+    with open(os.path.join(config.lgog_cache, 'gamedetails.json')) as f:
         data = json.load(f)
     if data is None:
         return "Unable to load the GOG games database."
@@ -22,7 +20,7 @@ def library():
             game['download'] = 0
         elif state == 'running':
             game['download'] = 0
-        elif os.path.isdir(os.path.join(lib_dir, game['gamename'])):
+        elif os.path.isdir(os.path.join(config.lgog_library, game['gamename'])):
             game['download'] = 1
     return render_template('library.html', data=data['games'])
 
