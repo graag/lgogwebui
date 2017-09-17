@@ -9,7 +9,7 @@ app = Flask(__name__)
 
 @app.route('/')
 def library():
-    with open(os.path.join(config.lgog_cache, 'gamedetails.json')) as f:
+    with open(os.path.join(config.lgog_cache, 'gamedetails.json'), encoding='utf-8') as f:
         data = json.load(f)
     if data is None:
         return "Unable to load the GOG games database."
