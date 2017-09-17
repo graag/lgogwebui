@@ -28,6 +28,7 @@
     text-align: right;
     padding: 10px;
     float: right;
+    height: 15px;
 }
 .check_hidden
 {
@@ -35,6 +36,39 @@
     text-align: right;
     padding: 10px;
     float: right;
+    height: 15px;
+}
+.platform
+{
+    color: #cccccc;
+    text-align: right;
+    padding: 10px;
+    float: right;
+    height: 15px;
+}
+.platform_selected
+{
+    color: #262626;
+    text-align: right;
+    padding: 10px;
+    float: right;
+    height: 15px;
+}
+.platform_hidden
+{
+    color: #fff;
+    text-align: right;
+    padding: 10px;
+    float: right;
+    height: 15px;
+}
+.platform a
+{
+    color: #cccccc;
+}
+.platform_selected a
+{
+    color: #262626;
 }
 .search
 {
@@ -42,6 +76,7 @@
     text-align: left;
     padding: 10px;
     float: left;
+    height: 15px;
 }
 a
 {
