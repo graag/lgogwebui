@@ -1,11 +1,10 @@
 #!/usr/bin/env python3
 
 import os
-import argparse
 import time
 import logging
-import models
 import re
+import models
 import config
 from models import Game, Status, session
 from subprocess import Popen, PIPE, STDOUT, TimeoutExpired
@@ -19,12 +18,8 @@ def main():
     # statements in raw SQL.
     models.Base.metadata.create_all(models.engine)
 
-    update_countdown = 720
     while True:
         session.expire_all()
-        if update_countdown == 0:
-            update()
-            update_countdown = 720
         games = session.query(Game).all()
         logging.debug("Found %s games.", len(games))
         for game in games:
@@ -32,7 +27,6 @@ def main():
             if game.state == Status.queued or game.state == Status.running:
                 download(session, game)
         time.sleep(5)
-        update_countdown -= 1
 
 def download(session, game):
     logging.debug("Download request: %s", game.name)
@@ -102,10 +96,36 @@ def download(session, game):
     session.commit()
 
 def update():
-    # TODO run --list
-    # For games in gog-repo run --status and add to redis
-    # Run orphan check and remove ??
-    pass
+    try:
+        _opts = [
+            'lgogdownloader',
+            '--update-cache'
+        ]
+        logging.debug("Starting cache update: %s", _opts)
+        _proc = Popen(_opts, stdout=PIPE, stderr=PIPE)
+        _out = _proc.communicate(timeout=config.command_timeout)
+        # Check return code. If lgogdowloader was not killed by signal Popen will
+        # not rise an exception
+        if _proc.returncode != 0:
+            raise OSError((
+                _proc.returncode,
+                "lgogdownloader returned non zero exit code.\n%s" %
+                str(_out)
+                ))
+    except:
+        logging.error("Cache update raised an error", exc_info=True)
+
+def update_loop(scheduler, pause, function, functargs = ()):
+    """
+    Function make a schedule a periodic action and execute it
+
+    :param sched: instance of scheduler
+    :param pause: time beetween executing sched action
+    :param function: action to execute
+    :param functags: params to the action
+    """
+    scheduler.enter(pause, 1, update_loop, argument=(scheduler, pause, function, functargs))
+    function()
 
 if __name__ == "__main__":
     main()

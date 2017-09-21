@@ -2,14 +2,17 @@
 
 import json
 import os
-import config
 import logging
-from models import Game, Status, session
+import sched
+import time
+
 from flask import Flask, render_template, redirect, url_for
 from flask.ext.autoindex import AutoIndex
 from sqlalchemy.orm.exc import NoResultFound
 
-#logging.getLogger('sqlalchemy.engine').setLevel(logging.INFO)
+import config
+from models import Game, Status, session
+from lgogdaemon import update_loop, update
 
 app = Flask(__name__)
 index = AutoIndex(app, config.lgog_library, add_url_rules=False)
@@ -20,6 +23,12 @@ def setup_logging():
         # In production mode, add log handler to sys.stderr.
         app.logger.addHandler(logging.StreamHandler())
         app.logger.setLevel(logging.DEBUG)
+
+@app.before_first_request
+def setup_updater():
+    scheduler = sched.scheduler(time.time, time.sleep)
+    update_loop(scheduler, config.update_period, update, None)
+    scheduler.run()
 
 @app.route('/')
 def library():
