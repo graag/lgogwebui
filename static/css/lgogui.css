@@ -46,29 +46,13 @@
     float: right;
     height: 15px;
 }
-.platform_selected
-{
-    color: #262626;
-    text-align: right;
-    padding: 10px;
-    float: right;
-    height: 15px;
-}
-.platform_hidden
+.hidden i
 {
     color: #fff;
-    text-align: right;
-    padding: 10px;
-    float: right;
-    height: 15px;
 }
-.platform a
+.disabled i
 {
     color: #cccccc;
-}
-.platform_selected a
-{
-    color: #262626;
 }
 .search
 {
@@ -77,6 +61,10 @@
     padding: 10px;
     float: left;
     height: 15px;
+}
+i
+{
+    color: #262626;
 }
 a
 {
