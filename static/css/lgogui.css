@@ -29,30 +29,37 @@
     padding: 10px;
     float: right;
     height: 15px;
-}
-.check_hidden
-{
-    color: #fff;
-    text-align: right;
-    padding: 10px;
-    float: right;
-    height: 15px;
+    cursor: pointer;
 }
 .platform
 {
-    color: #cccccc;
+    color: #262626;
+    text-align: right;
+    padding: 10px;
+    float: right;
+    height: 15px;
+    cursor: pointer;
+}
+.progress
+{
+    color: #262626;
     text-align: right;
     padding: 10px;
     float: right;
     height: 15px;
 }
-.hidden i
+.invisible
 {
     color: #fff;
+    cursor: default;
 }
-.disabled i
+.disabled
 {
     color: #cccccc;
+}
+.hidden
+{
+    display: none;
 }
 .search
 {
@@ -62,10 +69,14 @@
     float: left;
     height: 15px;
 }
-i
+/*i
 {
     color: #262626;
 }
+span
+{
+    color: #262626;
+}*/
 a
 {
     color: #262626;

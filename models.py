@@ -4,14 +4,15 @@ import logging
 import enum
 import config
 
-from sqlalchemy import Column, ForeignKey, Integer, String, Enum
+from sqlalchemy import Column, Integer, String, Enum
 from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import relationship, sessionmaker
+from sqlalchemy.orm import sessionmaker, scoped_session
 from sqlalchemy import create_engine
 
 logging.basicConfig(level=logging.DEBUG)
 
 Base = declarative_base()
+
 
 class Status(enum.Enum):
     new = 1
@@ -19,6 +20,7 @@ class Status(enum.Enum):
     running = 3
     done = 4
     failed = 5
+
 
 class Game(Base):
     __tablename__ = 'games'
@@ -30,6 +32,7 @@ class Game(Base):
     progress = Column(Integer)
     state = Column(Enum(Status))
 
+
 # Create an engine that stores data in the local directory's
 # sqlalchemy_example.db file.
 engine = create_engine("sqlite:///%s/lgog-daemon.db" % config.lgog_cache)
@@ -39,4 +42,4 @@ engine = create_engine("sqlite:///%s/lgog-daemon.db" % config.lgog_cache)
 Base.metadata.bind = engine
 
 session_factory = sessionmaker(bind=engine)
-session = session_factory()
+Session = scoped_session(session_factory)
