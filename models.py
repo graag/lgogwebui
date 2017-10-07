@@ -19,7 +19,8 @@ class Status(enum.Enum):
     queued = 2
     running = 3
     done = 4
-    failed = 5
+    missing = 5
+    failed = 6
 
 
 class Game(Base):
@@ -29,8 +30,12 @@ class Game(Base):
     id = Column(Integer, primary_key=True)
     name = Column(String(250), nullable=False)
     platform = Column(Integer, nullable=False)
-    progress = Column(Integer)
-    state = Column(Enum(Status))
+    platform_ondisk = Column(Integer, default=0)
+    progress = Column(Integer, default=0)
+    state = Column(Enum(Status), default=Status.new)
+    done_count = Column(Integer, default=0)
+    missing_count = Column(Integer, default=0)
+    update_count = Column(Integer, default=0)
 
 
 # Create an engine that stores data in the local directory's

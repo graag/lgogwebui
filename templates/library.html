@@ -5,9 +5,10 @@
 <script src="/static/js/jquery.min.js"></script>
 <script src="/static/js/lgogwebui.js"></script>
 <body>
-    {% for game in data if not game.hidden %}
+    {% for game in data %}
     <div class="game" id="{{ game.gamename }}">
         <a name="{{ game.gamename }}"></a>
+        <div class="search"><a href="https://www.gog.com/games?search={{ game.title }}"><i class="fa fa-search" aria-hidden="true"></i><a/></div>
         {% if game.selected.linux %}
         <div class="platform" id="{{ game.gamename }}_platform_4" onclick="toggle_platform('{{ game.gamename }}', '4')"><i class="fa fa-linux" aria-hidden="true"></i></div>
         {% elif game.available.linux %}
@@ -33,14 +34,22 @@
         <div class="icon"><img class="icon" src="{{ game.icon }}" alt=""></div>
         <div class="link">{{ game.title }}</div>
         </a>
-        <div class="search"><a href="https://www.gog.com/games?search={{ game.title }}"><i class="fa fa-search" aria-hidden="true"></i><a/></div>
-        <div class="check{% if game.download <= 0 %} hidden{% endif %}"  id="{{ game.gamename }}_repo">
+        <!-- Game REPO - far right -->
+        <div class="check{% if game.done_count == 0 %} hidden{% endif %}"  id="{{ game.gamename }}_repo">
             <a href="/gog-repo/{{ game.gamename }}"><i class="fa fa-archive" aria-hidden="true"></i></a></div>
-        <div class="check{% if game.download >= 0 %} hidden{% endif %}"  id="{{ game.gamename }}_download" onclick="game_download('{{ game.gamename }}')">
+        <!-- Game download button -->
+        <div class="check{% if game.state == 'running' or game.state == 'queued' or ( game.state == 'done' and game.missing_count == 0 ) %} hidden{% endif %}"
+            id="{{ game.gamename }}_download" onclick="game_download('{{ game.gamename }}')">
             <i class="fa fa-download" aria-hidden="true"></i></a></div>
-        <div class="check{% if game.download != 0 %} hidden{% endif %}" id="{{ game.gamename }}_spinner">
+        <!-- Game update button -->
+        <div class="check{% if game.state == 'running' or game.state == 'queued' or game.update_count == 0 or game.missing_count > 0 %} hidden{% endif %}"
+            id="{{ game.gamename }}_update" onclick="game_download('{{ game.gamename }}')">
+            <i class="fa fa-download" aria-hidden="true"></i></a></div>
+        <!-- Spinner -->
+        <div class="check{% if game.state != 'running' and game.state != 'queued' %} hidden{% endif %}" id="{{ game.gamename }}_spinner">
             <i class="fa fa-spinner fa-spin" aria-hidden="true"></i></div>
-        <div class="check{% if game.download != 0 %} hidden{% endif %}" id="{{ game.gamename }}_progress">
+        <!-- Progress -->
+        <div class="check{% if game.state != 'running' and game.state != 'queued' %} hidden{% endif %}" id="{{ game.gamename }}_progress">
             <span>{{ game.progress }} %</span></div>
     </div>
     {% endfor %}

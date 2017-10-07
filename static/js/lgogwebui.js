@@ -3,9 +3,15 @@ var active_games = []
 function toggle_platform(game, platform) {
     $.get("/platform/"+game+"/"+platform, function(data){
         $("#"+game+"_platform_"+platform).toggleClass("disabled");
+        console.log( "Toggle result: " + data )
+        if(data.missing) {
+            $("#"+game+"_download").show();
+        } else {
+            $("#"+game+"_download").hide();
+        }
     })
-    .fail(function() {
-        alert( "error" );
+    .fail(function(jqXHR, textStatus, errorThrown) {
+        alert( textStatus );
     });
 }
 
@@ -17,9 +23,10 @@ function game_download(game) {
         $("#"+game+"_progress").show();
         $("#"+game+"_spinner").show();
         $("#"+game+"_download").hide();
+        $("#"+game+"_update").hide();
     })
-    .fail(function() {
-        alert( "error" );
+    .fail(function(data) {
+        alert( data );
     });
 }
 
