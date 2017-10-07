@@ -8,7 +8,7 @@
     {% for game in data %}
     <div class="game" id="{{ game.gamename }}">
         <a name="{{ game.gamename }}"></a>
-        <div class="search"><a href="https://www.gog.com/games?search={{ game.title }}"><i class="fa fa-search" aria-hidden="true"></i><a/></div>
+        <div class="search"><a target="_blank" href="https://www.gog.com/games?search={{ game.title }}"><i class="fa fa-search" aria-hidden="true"></i><a/></div>
         {% if game.selected.linux %}
         <div class="platform" id="{{ game.gamename }}_platform_4" onclick="toggle_platform('{{ game.gamename }}', '4')"><i class="fa fa-linux" aria-hidden="true"></i></div>
         {% elif game.available.linux %}
@@ -30,13 +30,13 @@
         {% else %}
         <div class="platform invisible" id="{{ game.gamename }}_platform_1"><i class="fa fa-windows" aria-hidden="true"></i></div>
         {% endif %}
-        <a href="https://www.gog.com/game/{{ game.gamename }}">
+        <a target="_blank" href="https://www.gog.com/game/{{ game.gamename }}">
         <div class="icon"><img class="icon" src="{{ game.icon }}" alt=""></div>
         <div class="link">{{ game.title }}</div>
         </a>
         <!-- Game REPO - far right -->
         <div class="check{% if game.done_count == 0 %} hidden{% endif %}"  id="{{ game.gamename }}_repo">
-            <a href="/gog-repo/{{ game.gamename }}"><i class="fa fa-archive" aria-hidden="true"></i></a></div>
+            <a target="_blank" href="/gog-repo/{{ game.gamename }}"><i class="fa fa-archive" aria-hidden="true"></i></a></div>
         <!-- Game download button -->
         <div class="check{% if game.state == 'running' or game.state == 'queued' or ( game.state == 'done' and game.missing_count == 0 ) %} hidden{% endif %}"
             id="{{ game.gamename }}_download" onclick="game_download('{{ game.gamename }}')">

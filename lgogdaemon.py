@@ -42,57 +42,65 @@ def download(game_name):
         _session.commit()
         logger.debug("Game %s state changed to running", game.name)
         while _count < 5:
-            _opts = [
-                'lgogdownloader',
-                '--progress-interval', '1000',
-                '--no-unicode',
-                '--no-color',
-                '--threads', '1',
-                '--exclude', 'e,c',
-                '--download',
-                '--platform', str(game.platform),
-                '--game',
-                '^'+game.name+'$'
-            ]
-            logger.debug("Starting download: %s", _opts)
-            _proc = Popen(_opts, stdout=PIPE, stderr=PIPE,
-                          universal_newlines=True)
-            while _proc.poll() is None:
-                _out = _proc.stdout.readline()
-                _m_progress = _re_progress.search(_out)
-                _m_remain = _re_remain.search(_out)
-                if _m_remain is not None:
-                    _waiting = int(_m_remain.groups()[0])
-                    if _all == 0:
-                        _all = _waiting + 1
-                if _m_progress is not None and _all != 0:
-                    # For multiple files each gets equal part of progress bar
-                    _part = 100.0/_all
-                    # Calculate current file fraction of full progress bar
-                    _current_part = \
-                        _part * int(_m_progress.groups()[0]) / 100.0
-                    # Calculate fraction of finished files and add current
-                    # file progress
-                    _progress = (_all - _waiting - 1) * _part + _current_part
+            try:
+                _opts = [
+                    'lgogdownloader',
+                    '--progress-interval', '1000',
+                    '--no-unicode',
+                    '--no-color',
+                    '--threads', '1',
+                    '--exclude', 'e,c',
+                    '--download',
+                    '--platform', str(game.platform),
+                    '--game',
+                    '^'+game.name+'$'
+                ]
+                logger.debug("Starting download: %s", _opts)
+                _proc = Popen(_opts, stdout=PIPE, stderr=PIPE,
+                              universal_newlines=True)
+                while _proc.poll() is None:
+                    _out = _proc.stdout.readline()
+                    _m_progress = _re_progress.search(_out)
+                    _m_remain = _re_remain.search(_out)
+                    if _m_remain is not None:
+                        _waiting = int(_m_remain.groups()[0])
+                        if _all == 0:
+                            _all = _waiting + 1
+                    if _m_progress is not None and _all != 0:
+                        # For multiple files each gets equal part of progress
+                        # bar
+                        _part = 100.0/_all
+                        # Calculate current file fraction of full progress bar
+                        _current_part = \
+                            _part * int(_m_progress.groups()[0]) / 100.0
+                        # Calculate fraction of finished files and add current
+                        # file progress
+                        _progress = \
+                            (_all - _waiting - 1) * _part + _current_part
 
-                # logger.debug(_out)
-                # logger.debug("PROGRESS: %s", _progress)
-                if _progress > 100:
-                    logger.debug("Bad progress: %s for %s with %s parts.",
-                                 game.name, _progress, _all)
-                    logger.debug(_out)
-                game.progress = round(_progress, 1)
-                game.platform_ondisk = game.platform
-                _session.commit()
-            # Check return code. If lgogdowloader was not killed by signal
-            # Popen will not rise an exception
-            if _proc.returncode != 0:
-                raise OSError((
-                    _proc.returncode,
-                    "lgogdownloader returned non zero exit code.\n%s" %
-                    str(_out)
-                    ))
-            _count += 1
+                    # logger.debug(_out)
+                    # logger.debug("PROGRESS: %s", _progress)
+                    if _progress > 100:
+                        logger.debug("Bad progress: %s for %s with %s parts.",
+                                     game.name, _progress, _all)
+                        logger.debug(_out)
+                    game.progress = round(_progress, 1)
+                    game.platform_ondisk = game.platform
+                    _session.commit()
+                # Check return code. If lgogdowloader was not killed by signal
+                # Popen will not rise an exception
+                if _proc.returncode != 0:
+                    raise OSError((
+                        _proc.returncode,
+                        "lgogdownloader returned non zero exit code.\n%s" %
+                        str(_out)
+                        ))
+                break
+            except Exception:
+                logger.error(
+                    "Execution of lgogdownloader for %s raised an error",
+                    game.name, exc_info=True)
+                _count += 1
         if _count == 5:
             logger.error("Download of %s failed", game.name)
             game.state = Status.failed
