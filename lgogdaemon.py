@@ -45,6 +45,7 @@ def download(game_name):
             try:
                 _opts = [
                     'lgogdownloader',
+                    '--directory', config.lgog_library,
                     '--progress-interval', '1000',
                     '--no-unicode',
                     '--no-color',
@@ -90,10 +91,11 @@ def download(game_name):
                 # Check return code. If lgogdowloader was not killed by signal
                 # Popen will not rise an exception
                 if _proc.returncode != 0:
+                    _err = _proc.stderr.read()
                     raise OSError((
                         _proc.returncode,
-                        "lgogdownloader returned non zero exit code.\n%s" %
-                        str(_out)
+                        "lgogdownloader returned non zero exit code.\nOUT: %s\nERR: %s" %
+                        (_out, _err)
                         ))
                 break
             except Exception:
@@ -191,6 +193,7 @@ def status_query(game_name, platform):
         _re_status = re.compile(r"(\w\w\w?) %s (\S+)" % game_name)
         _opts = [
             'lgogdownloader',
+            '--directory', config.lgog_library,
             '--no-unicode',
             '--no-color',
             '--exclude', 'e,c',
@@ -201,8 +204,10 @@ def status_query(game_name, platform):
         ]
         logger.debug("Query status: %s", _opts)
         _proc = Popen(_opts, stdout=PIPE, stderr=PIPE, universal_newlines=True)
+        _full_out = ""
         while _proc.poll() is None:
             _out = _proc.stdout.readline()
+            _full_out += _out
             _m_status = _re_status.search(_out)
             if _m_status is not None:
                 _found = True
@@ -219,10 +224,11 @@ def status_query(game_name, platform):
         # Check return code. If lgogdowloader was not killed by signal Popen
         # will not rise an exception
         if _proc.returncode != 0:
+            _err = _proc.stderr.read()
             raise OSError((
                 _proc.returncode,
-                "lgogdownloader returned non zero exit code.\n%s" %
-                str(_out)
+                "lgogdownloader returned non zero exit code.\nOUT: %s\nERR: %s" %
+                (_full_out, _err)
                 ))
         if not _found:
             logger.error("No installers found")
