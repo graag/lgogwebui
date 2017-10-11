@@ -94,7 +94,8 @@ def download(game_name):
                     _err = _proc.stderr.read()
                     raise OSError((
                         _proc.returncode,
-                        "lgogdownloader returned non zero exit code.\nOUT: %s\nERR: %s" %
+                        "lgogdownloader returned non zero exit code."
+                        "\nOUT: %s\nERR: %s" %
                         (_out, _err)
                         ))
                 break
@@ -144,26 +145,38 @@ def status(game_name):
             game = Game()
             game.name = game_name
             game.progress = 0
+            _platform_linux = False
+            _platform_mac = False
+            _platform_windows = False
+            # Search for downloaded installers
+            _game_dir = os.path.join(config.lgog_library, game_name)
+            for _name in os.listdir(_game_dir):
+                if not os.path.isdir(os.path.join(_game_dir, _name)):
+                    if _name.endswith('.sh'):
+                        _platform_linux = True
+                    elif _name.endswith('.exe'):
+                        _platform_windows = True
+                    elif _name.endswith('.pkg'):
+                        _platform_mac = True
+                    elif _name.endswith('.dmg'):
+                        _platform_mac = True
             _platform = 0
-            for _p in (1, 2, 4):
-                if _p & _available == 0:
-                    continue
-                _part_res = status_query(game.name, _p)
-                if _part_res is None:
-                    _res = None
-                    break
-                if _part_res[0] > 0:
-                    _platform |= _p
-                    _res[0] += _part_res[0]
-                    _res[1] += _part_res[1]
-                    _res[2] += _part_res[2]
+            if _platform_windows:
+                _platform |= 1
+            if _platform_mac:
+                _platform |= 2
+            if _platform_linux:
+                _platform |= 4
+            if _platform == 0:
+                _platform = 7
             game.platform = _platform
             game.platform_ondisk = _platform
             game.state = Status.done
-            if _res is not None and _res[1] > 0:
-                game.state = Status.missing
-            logger.debug("Platforms found on disk for %s: %s", game.name,
-                         game.platform)
+
+            _res = status_query(game.name, game.platform)
+            logger.info(
+                "Status check complete for %s. Selected platforms: %s.",
+                game.name, game.platform)
         if _res is None:
             logger.error(
                 "No installers returned by GOG for game: %s, platforms: %s.",
@@ -227,7 +240,8 @@ def status_query(game_name, platform):
             _err = _proc.stderr.read()
             raise OSError((
                 _proc.returncode,
-                "lgogdownloader returned non zero exit code.\nOUT: %s\nERR: %s" %
+                "lgogdownloader returned non zero exit code."
+                "\nOUT: %s\nERR: %s" %
                 (_full_out, _err)
                 ))
         if not _found:
