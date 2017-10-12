@@ -110,6 +110,7 @@ def download(game_name):
         else:
             game.state = Status.done
             game.done_count = _all
+            game.missing_count = 0
             logger.info("Game %s downloaded sucessfully", game.name)
         _session.commit()
         Session.remove()
