@@ -35,7 +35,7 @@
         <div class="link">{{ game.title }}</div>
         </a>
         <!-- Game REPO - far right -->
-        <div class="check{% if game.done_count == 0 %} hidden{% endif %}"  id="{{ game.gamename }}_repo">
+        <div class="check{% if game.ondisk.linux == 0 and game.ondisk.windows == 0 and game.ondisk.macos == 0 %} hidden{% endif %}"  id="{{ game.gamename }}_repo">
             <a target="_blank" href="/gog-repo/{{ game.gamename }}"><i class="fa fa-archive" aria-hidden="true"></i></a></div>
         <!-- Game download button -->
         <div class="check{% if game.state == 'running' or game.state == 'queued' or ( game.state == 'done' and game.missing_count == 0 ) %} hidden{% endif %}"
