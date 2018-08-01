@@ -5,11 +5,36 @@
 <script src="/static/js/jquery.min.js"></script>
 <script src="/static/js/lgogwebui.js"></script>
 <body>
+    <!-- Button to open the modal login form -->
+    <button onclick="document.getElementById('id01').style.display='block'">Login</button>
+
+    <!-- The Modal -->
+    <div id="login" class="modal">
+        <span onclick="document.getElementById('login').style.display='none'"
+              class="close" title="Close Modal">&times;</span>
+
+        <!-- Modal Content -->
+        <form class="modal-content animate" action="/login">
+            <div class="container">
+                <label for="user"><b>Username</b></label>
+                <input type="text" placeholder="Enter Username" name="user" required>
+
+                <label for="password"><b>Password</b></label>
+                <input type="password" placeholder="Enter Password" name="password" required>
+
+                <button type="submit">Login</button>
+            </div>
+
+            <div class="container" style="background-color:#f1f1f1">
+                <button type="button" onclick="document.getElementById('login').style.display='none'" class="cancelbtn">Cancel</button>
+            </div>
+        </form>
+    </div>
     <div class="header">
         {% if user.state == "logon" %}
-        <div class="user"><i class="fas fa-user"></i></div>
+        <div class="user" id="user_icon"><i class="fas fa-user"></i></div>
         {% else %}
-        <div class="user"><i class="fas fa-user-slash"></i></div>
+        <div class="user" id="user_icon" onclick="document.getElementById('login').style.display='block'"><i class="fas fa-user-slash"></i></div>
         {% endif %}
     </div>
     {% for game in data %}
