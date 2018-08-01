@@ -12,7 +12,7 @@ from threading import Timer
 from sqlalchemy.orm.exc import NoResultFound
 
 import config
-from models import Game, Status, Session
+from models import Game, User, LoginStatus, Status, Session
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 logger.addHandler(logging.StreamHandler())
@@ -28,6 +28,13 @@ def download(game_name):
     # All try block to get stack trace from worker thread
     try:
         _session = Session()
+        _user = _session.query(User).one()
+        if _user.state != LoginStatus.logon:
+            logger.warning(
+                "Cannot download game: %s. User not logged in to GOG.",
+                game_name
+            )
+            return
         game = _session.query(Game).filter(Game.name == game_name).one()
         # Run in GOG library folder
         os.chdir(config.lgog_library)
@@ -115,10 +122,11 @@ def download(game_name):
             game.missing_count = 0
             logger.info("Game %s downloaded sucessfully", game.name)
         _session.commit()
-        Session.remove()
     except Exception:
         logger.error("Download of %s raised an error", game.name,
                      exc_info=True)
+    finally:
+        Session.remove()
 
 
 def status(game_name):
@@ -144,6 +152,13 @@ def status(game_name):
                     _available |= inst['platform']
 
         _session = Session()
+        _user = _session.query(User).one()
+        if _user.state != LoginStatus.logon:
+            logger.warning(
+                "Cannot check game status: %s. User not logged in to GOG.",
+                game_name
+            )
+            return
         _res = [0, 0, 0]
         try:
             game = _session.query(Game).filter(Game.name == game_name).one()
@@ -188,16 +203,16 @@ def status(game_name):
             logger.error(
                 "No installers returned by GOG for game: %s, platforms: %s.",
                 game.name, game.platform)
-            Session.remove()
             return
         game.done_count = _res[0]
         game.missing_count = _res[1]
         game.update_count = _res[2]
         _session.add(game)
         _session.commit()
-        Session.remove()
     except Exception:
         logger.error("Unhandled exception in a worker thread!", exc_info=True)
+    finally:
+        Session.remove()
 
 
 def status_query(game_name, platform):
@@ -273,6 +288,11 @@ def update():
     """
     # All try block to get stack trace from worker thread
     try:
+        _session = Session()
+        _user = _session.query(User).one()
+        if _user.state != LoginStatus.logon:
+            logger.warning("Cannot update cache. User not logged in to GOG.")
+            return
         _opts = [
             'lgogdownloader',
             '--update-cache'
@@ -290,6 +310,8 @@ def update():
                 ))
     except Exception:
         logger.error("Cache update raised an error", exc_info=True)
+    finally:
+        Session.remove()
 
 
 def update_loop(pause, function, functargs=()):

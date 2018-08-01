@@ -1,34 +1,41 @@
 <html>
 <link rel="stylesheet" href="/static/css/lgogui.css" />
 <link rel="stylesheet" type="text/css" href="//fonts.googleapis.com/css?family=Lato" />
-<link rel="stylesheet" href="/static/css/font-awesome.min.css">
+<link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.2.0/css/all.css" integrity="sha384-hWVjflwFxL6sNzntih27bfxkr27PmbbK/iSvJ+a4+0owXq79v+lsFkW54bOGbiDQ" crossorigin="anonymous">
 <script src="/static/js/jquery.min.js"></script>
 <script src="/static/js/lgogwebui.js"></script>
 <body>
+    <div class="header">
+        {% if user.state == "logon" %}
+        <div class="user"><i class="fas fa-user"></i></div>
+        {% else %}
+        <div class="user"><i class="fas fa-user-slash"></i></div>
+        {% endif %}
+    </div>
     {% for game in data %}
     <div class="game" id="{{ game.gamename }}">
         <a name="{{ game.gamename }}"></a>
-        <div class="search"><a target="_blank" href="https://www.gog.com/games?search={{ game.title }}"><i class="fa fa-search" aria-hidden="true"></i><a/></div>
+        <div class="search"><a target="_blank" href="https://www.gog.com/games?search={{ game.title }}"><i class="fas fa-search" aria-hidden="true"></i><a/></div>
         {% if game.selected.linux %}
-        <div class="platform" id="{{ game.gamename }}_platform_4" onclick="toggle_platform('{{ game.gamename }}', '4')"><i class="fa fa-linux" aria-hidden="true"></i></div>
+        <div class="platform" id="{{ game.gamename }}_platform_4" onclick="toggle_platform('{{ game.gamename }}', '4')"><i class="fas fa-linux" aria-hidden="true"></i></div>
         {% elif game.available.linux %}
-        <div class="platform disabled" id="{{ game.gamename }}_platform_4" onclick="toggle_platform('{{ game.gamename }}', '4')"><i class="fa fa-linux" aria-hidden="true"></i></div>
+        <div class="platform disabled" id="{{ game.gamename }}_platform_4" onclick="toggle_platform('{{ game.gamename }}', '4')"><i class="fas fa-linux" aria-hidden="true"></i></div>
         {% else %}
-        <div class="platform invisible" id="{{ game.gamename }}_platform_4"><i class="fa fa-linux" aria-hidden="true"></i></div>
+        <div class="platform invisible" id="{{ game.gamename }}_platform_4"><i class="fas fa-linux" aria-hidden="true"></i></div>
         {% endif %}
         {% if game.selected.macos %}
-        <div class="platform" id="{{ game.gamename }}_platform_2" onclick="toggle_platform('{{ game.gamename }}', '2')"><i class="fa fa-apple" aria-hidden="true"></i></div>
+        <div class="platform" id="{{ game.gamename }}_platform_2" onclick="toggle_platform('{{ game.gamename }}', '2')"><i class="fas fa-apple" aria-hidden="true"></i></div>
         {% elif game.available.macos %}
-        <div class="platform disabled" id="{{ game.gamename }}_platform_2" onclick="toggle_platform('{{ game.gamename }}', '2')"><i class="fa fa-apple" aria-hidden="true"></i></div>
+        <div class="platform disabled" id="{{ game.gamename }}_platform_2" onclick="toggle_platform('{{ game.gamename }}', '2')"><i class="fas fa-apple" aria-hidden="true"></i></div>
         {% else %}
-        <div class="platform invisible" id="{{ game.gamename }}_platform_2"><i class="fa fa-apple" aria-hidden="true"></i></div>
+        <div class="platform invisible" id="{{ game.gamename }}_platform_2"><i class="fas fa-apple" aria-hidden="true"></i></div>
         {% endif %}
         {% if game.selected.windows %}
-        <div class="platform" id="{{ game.gamename }}_platform_1" onclick="toggle_platform('{{ game.gamename }}', '1')"><i class="fa fa-windows" aria-hidden="true"></i></div>
+        <div class="platform" id="{{ game.gamename }}_platform_1" onclick="toggle_platform('{{ game.gamename }}', '1')"><i class="fas fa-windows" aria-hidden="true"></i></div>
         {% elif game.available.windows %}
-        <div class="platform disabled" id="{{ game.gamename }}_platform_1" onclick="toggle_platform('{{ game.gamename }}', '1')"><i class="fa fa-windows" aria-hidden="true"></i></div>
+        <div class="platform disabled" id="{{ game.gamename }}_platform_1" onclick="toggle_platform('{{ game.gamename }}', '1')"><i class="fas fa-windows" aria-hidden="true"></i></div>
         {% else %}
-        <div class="platform invisible" id="{{ game.gamename }}_platform_1"><i class="fa fa-windows" aria-hidden="true"></i></div>
+        <div class="platform invisible" id="{{ game.gamename }}_platform_1"><i class="fas fa-windows" aria-hidden="true"></i></div>
         {% endif %}
         <a target="_blank" href="https://www.gog.com/game/{{ game.gamename }}">
         <div class="icon"><img class="icon" src="{{ game.icon }}" alt=""></div>
@@ -36,18 +43,18 @@
         </a>
         <!-- Game REPO - far right -->
         <div class="check{% if game.ondisk.linux == 0 and game.ondisk.windows == 0 and game.ondisk.macos == 0 %} hidden{% endif %}"  id="{{ game.gamename }}_repo">
-            <a target="_blank" href="/gog-repo/{{ game.gamename }}"><i class="fa fa-archive" aria-hidden="true"></i></a></div>
+            <a target="_blank" href="/gog-repo/{{ game.gamename }}"><i class="fas fa-archive" aria-hidden="true"></i></a></div>
         <!-- Game download button -->
         <div class="check{% if game.state == 'running' or game.state == 'queued' or ( game.state == 'done' and game.missing_count == 0 ) %} hidden{% endif %}"
             id="{{ game.gamename }}_download" onclick="game_download('{{ game.gamename }}')">
-            <i class="fa fa-download" aria-hidden="true"></i></a></div>
+            <i class="fas fa-download" aria-hidden="true"></i></a></div>
         <!-- Game update button -->
         <div class="check{% if game.state == 'running' or game.state == 'queued' or game.update_count == 0 or game.missing_count > 0 %} hidden{% endif %}"
             id="{{ game.gamename }}_update" onclick="game_download('{{ game.gamename }}')">
-            <i class="fa fa-download" aria-hidden="true"></i></a></div>
+            <i class="fas fa-download" aria-hidden="true"></i></a></div>
         <!-- Spinner -->
         <div class="check{% if game.state != 'running' and game.state != 'queued' %} hidden{% endif %}" id="{{ game.gamename }}_spinner">
-            <i class="fa fa-spinner fa-spin" aria-hidden="true"></i></div>
+            <i class="fas fa-spinner fa-spin" aria-hidden="true"></i></div>
         <!-- Progress -->
         <div class="check{% if game.state != 'running' and game.state != 'queued' %} hidden{% endif %}" id="{{ game.gamename }}_progress">
             <span>{{ game.progress }} %</span></div>

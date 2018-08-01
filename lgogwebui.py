@@ -21,7 +21,7 @@ from sqlalchemy import or_
 import config
 import lgogdaemon
 import models
-from models import Game, Status, Session
+from models import Game, User, LoginStatus, Status, Session
 
 app = Flask(__name__)
 download_scheduler = ThreadPoolExecutor(max_workers=1)
@@ -40,6 +40,14 @@ if not app.debug or os.environ.get("WERKZEUG_RUN_MAIN") == "true":
     app.logger.info("Initialize lgogwebui ...")
     # Make sure that the database exists
     models.Base.metadata.create_all(models.ENGINE)
+    # Make sure that login state exists in the DB
+    try:
+        _user = _session.query(User).one()
+    except NoResultFound:
+        _user = User()
+        _user.state = LoginStatus.logoff
+        _session.add(_user)
+        _session.commit()
     # Start update loop
     Timer(5, lgogdaemon.update_loop,
           (config.update_period, lgogdaemon.update,
