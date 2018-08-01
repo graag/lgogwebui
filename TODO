@@ -1,13 +1,7 @@
-- Verify sqlalchemy session thread safety
-- Use AJAX for progress updates, platform toggles and download requests.
-- Move the daemon inside Flask as worker pool from Threading and Sched.
+- Set progress to 100% of download finish
 - Add handlers for:
   - broken network connection
   - wrong game name
   - bad login credentials
-- Add update check for gamedatails.json
-- Add update check for downloaded installers
-  - Store in DB status of downloaded installers
-  - Add code that crawls the disk to find what was downloaded (updates DB)
 - Add global platform toggles
 - Add UI login dialog

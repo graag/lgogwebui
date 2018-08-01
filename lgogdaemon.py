@@ -289,7 +289,7 @@ def update_loop(pause, function, functargs=()):
     logger.info("Schedule next event after: %s seconds", pause)
     Timer(pause, update_loop, (pause, function, functargs)).start()
     # Execute the update function
-    function()
+    functargs[0].submit(function)
     # Execute status update for all downloaded games
     for _name in os.listdir(config.lgog_library):
         if os.path.isdir(os.path.join(config.lgog_library, _name)):

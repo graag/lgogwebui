@@ -24,7 +24,8 @@ import models
 from models import Game, Status, Session
 
 app = Flask(__name__)
-scheduler = ThreadPoolExecutor(max_workers=1)
+download_scheduler = ThreadPoolExecutor(max_workers=1)
+update_scheduler = ThreadPoolExecutor(max_workers=1)
 # Create instance of AutoIndex used to display contents of game download
 # directory. Explicitely disable add_url_rules as it would define some default
 # routes for "/"
@@ -41,14 +42,15 @@ if not app.debug or os.environ.get("WERKZEUG_RUN_MAIN") == "true":
     models.Base.metadata.create_all(models.engine)
     # Start update loop
     Timer(5, lgogdaemon.update_loop,
-          (config.update_period, lgogdaemon.update, (scheduler,))).start()
+          (config.update_period, lgogdaemon.update,
+              (update_scheduler,))).start()
     # Add to the download queue games marked in the DB
     _games = _session.query(Game).all()
     for _game in _games:
         if _game.state == Status.queued or _game.state == Status.running:
             app.logger.info("Found %s game for download: %s",
                             _game.name, _game.state)
-            scheduler.submit(lgogdaemon.download, _game.name)
+            download_scheduler.submit(lgogdaemon.download, _game.name)
     Session.remove()
 
 
@@ -228,7 +230,7 @@ def download(game):
         db_game.state = Status.queued
         db_game.progress = 0
         _session.commit()
-    scheduler.submit(lgogdaemon.download, game)
+    download_scheduler.submit(lgogdaemon.download, game)
     return "OK"
 
 
