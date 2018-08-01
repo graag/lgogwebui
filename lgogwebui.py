@@ -39,7 +39,7 @@ if not app.debug or os.environ.get("WERKZEUG_RUN_MAIN") == "true":
     app.logger.setLevel(logging.DEBUG)
     app.logger.info("Initialize lgogwebui ...")
     # Make sure that the database exists
-    models.Base.metadata.create_all(models.engine)
+    models.Base.metadata.create_all(models.ENGINE)
     # Start update loop
     Timer(5, lgogdaemon.update_loop,
           (config.update_period, lgogdaemon.update,
@@ -65,7 +65,6 @@ def session_cleaner(response):
 def library():
     """Display the main page."""
     _session = Session()
-    # app.logger.debug("ROOT requested")
     # TODO store in some cache
     with open(os.path.join(
               config.lgog_cache, 'gamedetails.json'), encoding='utf-8') as f:
@@ -139,6 +138,11 @@ def library():
 
 @app.route('/platform/<game>/<platform>')
 def toggle_platform(game, platform):
+    """
+    Toggle active state of platfrom for a game.
+    :param game: - game name
+    :param platform: - platform id (1 - windows, 2 - macos, 4 - linux)
+    """
     app.logger.info("Requesting toggle of %s platform: %s.", game, platform)
     _session = Session()
     _result = {
@@ -201,6 +205,10 @@ def toggle_platform(game, platform):
 
 @app.route('/download/<game>')
 def download(game):
+    """
+    Request game download
+    :param game: - game name
+    """
     _session = Session()
     app.logger.info("Requesting download of: %s.", game)
     try:
@@ -236,6 +244,9 @@ def download(game):
 
 @app.route('/status', methods=['GET'])
 def status_all():
+    """
+    Get status of all active downloads.
+    """
     # app.logger.debug("List of active game downloads")
     games = _session.query(Game).filter(
         or_(Game.state == Status.queued, Game.state == Status.running)).all()
@@ -245,6 +256,10 @@ def status_all():
 
 @app.route('/status', methods=['POST'])
 def status_selected():
+    """
+    Get status of selected downloads.
+    The list of games to check should be sent as POST data.
+    """
     check_games = request.get_json()
     # app.logger.debug("Status of games requested: %s", check_games)
     games = _session.query(Game).filter(
@@ -267,4 +282,7 @@ def status_selected():
 
 @app.route('/gog-repo/<path:path>')
 def browse(path):
+    """
+    Load directory view for selected path.
+    """
     return index.render_autoindex(path, endpoint='.browse')

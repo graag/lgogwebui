@@ -1,6 +1,4 @@
 #!/usr/bin/env python3
-# pylint: disable=invalid-name,bad-continuation,too-many-statements,
-# pylint: disable=too-many-branches,too-many-locals,broad-except
 """
 Module with implementation of the daemon part of lgogwebui.
 """
@@ -16,13 +14,17 @@ from sqlalchemy.orm.exc import NoResultFound
 import config
 from models import Game, Status, Session
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 logger.addHandler(logging.StreamHandler())
 logger.setLevel(logging.DEBUG)
 # logging.getLogger('sqlalchemy.engine').setLevel(logging.INFO)
 
 
 def download(game_name):
+    """
+    Download a game form GOG.
+    :param string game_name: - the name of a game to download
+    """
     # All try block to get stack trace from worker thread
     try:
         _session = Session()
@@ -120,12 +122,16 @@ def download(game_name):
 
 
 def status(game_name):
+    """
+    Check game status and stor in the DB.
+    :param string game_name: - the name of a game to download
+    """
     # All try block to get stack trace from worker thread
     try:
         logger.debug("Check game status: %s", game_name)
         with open(os.path.join(config.lgog_cache, 'gamedetails.json'),
-                  encoding='utf-8') as f:
-            data = json.load(f)
+                  encoding='utf-8') as _file:
+            data = json.load(_file)
         if data is None:
             logger.error("Game not found in lgogdownloader cache: %s",
                          game_name)
@@ -195,6 +201,11 @@ def status(game_name):
 
 
 def status_query(game_name, platform):
+    """
+    Execute status query for a game.
+    :param string game_name: - the name of a game to download
+    :param int platform: - selected platform bitmask
+    """
     # All try block to get stack trace from worker thread
     try:
         # Run in GOG library folder
@@ -257,6 +268,9 @@ def status_query(game_name, platform):
 
 
 def update():
+    """
+    Execute lgogdownloader cache update.
+    """
     # All try block to get stack trace from worker thread
     try:
         _opts = [

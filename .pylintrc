@@ -1,0 +1,11 @@
+[MESSAGES CONTROL]
+disable=
+    locally-disabled,
+    too-few-public-methods,
+    too-many-statements,
+    too-many-nested-blocks,
+    too-many-branches,
+    too-many-locals,
+    broad-except
+
+# bad-continuation
