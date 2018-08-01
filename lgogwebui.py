@@ -139,8 +139,10 @@ def library():
             db_game.state = Status.missing
             _session.add(db_game)
             _session.commit()
+        _user = _session.query(User).one()
+
     # app.logger.debug(_metadata)
-    return render_template('library.html', data=_metadata)
+    return render_template('library.html', data=_metadata, user=_user)
 
 
 @app.route('/platform/<game>/<platform>')
