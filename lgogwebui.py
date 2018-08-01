@@ -45,7 +45,6 @@ if not app.debug or os.environ.get("WERKZEUG_RUN_MAIN") == "true":
         _user = _session.query(User).one()
     except NoResultFound:
         _user = User()
-        _user.state = LoginStatus.logoff
         _session.add(_user)
         _session.commit()
     # Start update loop
