@@ -71,7 +71,7 @@ class User(Base):
     __tablename__ = 'users'
     user_id = Column(Integer, primary_key=True)
     #: login state
-    state = Column(Enum(Status), default=LoginStatus.logoff)
+    state = Column(Enum(LoginStatus), default=LoginStatus.logoff)
 
 
 # Create an engine that stores data in a sqlte db file.
