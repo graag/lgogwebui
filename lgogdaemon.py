@@ -4,20 +4,150 @@ Module with implementation of the daemon part of lgogwebui.
 """
 
 import os
-import logging
 import re
 import json
+from fcntl import fcntl, F_GETFL, F_SETFL
 from subprocess import Popen, PIPE
 from threading import Timer
+from queue import Queue
+from time import sleep
 from sqlalchemy.orm.exc import NoResultFound
 
 import config
+from main import app
 from models import Game, User, LoginStatus, Status, Session
 
-logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
-logger.addHandler(logging.StreamHandler())
-logger.setLevel(logging.DEBUG)
-# logging.getLogger('sqlalchemy.engine').setLevel(logging.INFO)
+
+msgQueue = Queue()
+
+
+class LoginRequired(Exception):
+    """
+    Exception thrown when lgogdownloader requires login.
+    """
+    pass
+
+
+class InteractivePopen(Popen):
+    class BufferedStream:
+        def __init__(self, stream):
+            self.stream = stream
+            self.buff = ""
+            self.data = []
+
+    def __init__(self, opts):
+        super().__init__(opts, stdout=PIPE, stderr=PIPE, stdin=PIPE,
+                         universal_newlines=True)
+        # set the O_NONBLOCK flag of stdout and stderr file descriptors:
+        _flags = fcntl(self.stdout, F_GETFL)  # get current p.stdout flags
+        fcntl(self.stdout, F_SETFL, _flags | os.O_NONBLOCK)
+        _flags = fcntl(self.stderr, F_GETFL)  # get current p.stderr flags
+        fcntl(self.stderr, F_SETFL, _flags | os.O_NONBLOCK)
+
+        self._out = self.BufferedStream(self.stdout)
+        self._err = self.BufferedStream(self.stderr)
+
+    def _scan(self, prompt, bstream):
+        if bstream.data:
+            return bstream.data.pop(0)
+        bstream.buff += bstream.stream.read(1024)
+        bstream.data = bstream.buff.split('\n')
+        bstream.buff = bstream.data.pop()
+        if re.search(prompt, bstream.buff):
+            bstream.data.append(bstream.buff)
+            bstream.buff = ''
+        if bstream.data:
+            return bstream.data.pop(0)
+        return ''
+
+    def monitor(self, wait=None):
+        if wait is not None and self.empty():
+            sleep(wait)
+        # Split on ": " to capture lines with user input
+        _out = self._scan(': $', self._out)
+        _err = self._scan(': $', self._err)
+        return _out, _err
+
+    def empty(self):
+        return not self._out.data and not self._err.data
+
+
+def login(user, password):
+    """
+    Login into GOG.
+    :param string user: - GOG user name
+    :param string password: - GOG password
+    """
+    # All try block to get stack trace from worker thread
+    try:
+        _out = ""
+        _err = ""
+        _session = Session()
+        _user = _session.query(User).one()
+        _user.state = LoginStatus.running
+        _session.commit()
+        # Run in GOG library folder
+        os.chdir(config.lgog_library)
+        _opts = [
+            'lgogdownloader',
+            '--login',
+            '--login-email',
+            user,
+            '--login-password',
+            password
+        ]
+        app.logger.debug("Starting login ...")
+        _result = 0
+        _proc = InteractivePopen(_opts)
+        while _proc.poll() is None or not _proc.empty():
+            _out, _err = _proc.monitor(5)
+            if not _out and not _err:
+                continue
+            # Handle login requests from lgogdownloader
+            if 'Security code' in _err:
+                _user.state = LoginStatus.running_2fa
+                _session.commit()
+                app.logger.debug("Wait for security code")
+                _code = msgQueue.get()
+                app.logger.debug("Enter the security code")
+                _proc.stdin.write("%s\n" % _code)
+                _proc.stdin.flush()
+                _err = ""
+            elif 'Login form contains reCAPTCHA' in _out:
+                app.logger.error("Stop login as reCAPTCHA is required")
+                _user.state = LoginStatus.recaptcha
+                _session.commit()
+                _proc.terminate()
+                return
+            elif 'HTTP: Login successful' in _err:
+                _result += 1
+            elif 'Galaxy: Login successful' in _err:
+                _result += 1
+            elif 'API: Login successful' in _err:
+                _result += 1
+        # Check return code. If lgogdowloader was not killed by signal
+        # Popen will not rise an exception
+        if _proc.returncode != 0:
+            _err += _proc.stderr.read()
+            raise OSError((
+                _proc.returncode,
+                "lgogdownloader returned non zero exit code."
+                "\nOUT: %s\nERR: %s" %
+                (_out, _err)
+                ))
+        if _result == 3:
+            _user.state = LoginStatus.logon
+            app.logger.info("Login successful")
+        else:
+            _user.state = LoginStatus.failed
+            app.logger.warning("Login failed")
+        _session.commit()
+    except Exception:
+        app.logger.error("Login raised an error", exc_info=True)
+        _user.state = LoginStatus.failed
+        _session.commit()
+    finally:
+        Session.remove()
 
 
 def download(game_name):
@@ -30,7 +160,7 @@ def download(game_name):
         _session = Session()
         _user = _session.query(User).one()
         if _user.state != LoginStatus.logon:
-            logger.warning(
+            app.logger.warning(
                 "Cannot download game: %s. User not logged in to GOG.",
                 game_name
             )
@@ -38,7 +168,10 @@ def download(game_name):
         game = _session.query(Game).filter(Game.name == game_name).one()
         # Run in GOG library folder
         os.chdir(config.lgog_library)
-        logger.debug("Download thread: %s", game.name)
+        app.logger.debug("Download thread: %s", game.name)
+        _platform = game.platform
+        if _platform < 0:
+            _platform = (game.platform_available & _user.platform)
         _count = 0  # Number of retries
         _all = 0  # Number of files to download
         _progress = 0  # Progress in %
@@ -49,7 +182,7 @@ def download(game_name):
         _re_remain = re.compile(r"Remaining:.*(\d+)")
         game.state = Status.running
         _session.commit()
-        logger.debug("Game %s state changed to running", game.name)
+        app.logger.debug("Game %s state changed to running", game.name)
         while _count < 5:
             try:
                 _opts = [
@@ -61,14 +194,20 @@ def download(game_name):
                     '--threads', '1',
                     '--exclude', 'e,c',
                     '--download',
-                    '--platform', str(game.platform),
+                    '--platform', str(_platform),
                     '--game',
                     '^'+game.name+'$'
                 ]
-                logger.debug("Starting download: %s", _opts)
-                _proc = Popen(_opts, stdout=PIPE, stderr=PIPE,
+                app.logger.debug("Starting download: %s", _opts)
+                _proc = Popen(_opts, stdout=PIPE, stderr=PIPE, stdin=PIPE,
                               universal_newlines=True)
                 while _proc.poll() is None:
+                    game = _session.query(Game).filter(Game.name == game_name).one()
+                    if game.state == Status.stop:
+                        app.logger.info("Game %s downloaded stopped", game.name)
+                        _count = 100
+                        _proc.terminate()
+                        return
                     _out = _proc.stdout.readline()
                     _m_progress = _re_progress.search(_out)
                     _m_remain = _re_remain.search(_out)
@@ -88,19 +227,27 @@ def download(game_name):
                         _progress = \
                             (_all - _waiting - 1) * _part + _current_part
 
-                    # logger.debug(_out)
-                    # logger.debug("PROGRESS: %s", _progress)
+                    # app.logger.debug(_out)
+                    # app.logger.debug("PROGRESS: %s", _progress)
                     if _progress > 100:
-                        logger.debug("Bad progress: %s for %s with %s parts.",
-                                     game.name, _progress, _all)
-                        logger.debug(_out)
+                        app.logger.debug(
+                            "Bad progress: %s for %s with %s parts.",
+                            game.name, _progress, _all
+                        )
+                        app.logger.debug(_out)
                     game.progress = round(_progress, 1)
-                    game.platform_ondisk = game.platform
+                    game.platform_ondisk = _platform
                     _session.commit()
                 # Check return code. If lgogdowloader was not killed by signal
                 # Popen will not rise an exception
                 if _proc.returncode != 0:
                     _err = _proc.stderr.read()
+                    if "Unable to read email and password" in _err:
+                        app.logger.warning("Login required.")
+                        _user.state = LoginStatus.logoff
+                        game.state = Status.failed
+                        _session.commit()
+                        return
                     raise OSError((
                         _proc.returncode,
                         "lgogdownloader returned non zero exit code."
@@ -109,40 +256,43 @@ def download(game_name):
                         ))
                 break
             except Exception:
-                logger.error(
+                app.logger.error(
                     "Execution of lgogdownloader for %s raised an error",
                     game.name, exc_info=True)
                 _count += 1
         if _count == 5:
-            logger.error("Download of %s failed", game.name)
+            app.logger.error("Download of %s failed", game.name)
             game.state = Status.failed
+        elif _count > 5:
+            app.logger.debug("Terminate raises exception")
+            pass
         else:
             game.state = Status.done
             game.done_count = _all
             game.missing_count = 0
-            logger.info("Game %s downloaded sucessfully", game.name)
+            app.logger.info("Game %s downloaded sucessfully", game.name)
         _session.commit()
     except Exception:
-        logger.error("Download of %s raised an error", game.name,
-                     exc_info=True)
+        app.logger.error("Download of %s raised an error", game.name,
+                         exc_info=True)
     finally:
         Session.remove()
 
 
 def status(game_name):
     """
-    Check game status and stor in the DB.
+    Check game status and store in the DB.
     :param string game_name: - the name of a game to download
     """
     # All try block to get stack trace from worker thread
     try:
-        logger.debug("Check game status: %s", game_name)
+        app.logger.debug("Check game status: %s", game_name)
         with open(os.path.join(config.lgog_cache, 'gamedetails.json'),
                   encoding='utf-8') as _file:
             data = json.load(_file)
         if data is None:
-            logger.error("Game not found in lgogdownloader cache: %s",
-                         game_name)
+            app.logger.error("Game not found in lgogdownloader cache: %s",
+                             game_name)
             return
         _available = 0
         for game_data in data['games']:
@@ -154,7 +304,7 @@ def status(game_name):
         _session = Session()
         _user = _session.query(User).one()
         if _user.state != LoginStatus.logon:
-            logger.warning(
+            app.logger.warning(
                 "Cannot check game status: %s. User not logged in to GOG.",
                 game_name
             )
@@ -162,55 +312,34 @@ def status(game_name):
         _res = [0, 0, 0]
         try:
             game = _session.query(Game).filter(Game.name == game_name).one()
-            _res = status_query(game.name, game.platform)
-        except NoResultFound:
-            game = Game()
-            game.name = game_name
-            game.progress = 0
-            _platform_linux = False
-            _platform_mac = False
-            _platform_windows = False
-            # Search for downloaded installers
-            _game_dir = os.path.join(config.lgog_library, game_name)
-            for _name in os.listdir(_game_dir):
-                if not os.path.isdir(os.path.join(_game_dir, _name)):
-                    if _name.endswith('.sh'):
-                        _platform_linux = True
-                    elif _name.endswith('.exe'):
-                        _platform_windows = True
-                    elif _name.endswith('.pkg'):
-                        _platform_mac = True
-                    elif _name.endswith('.dmg'):
-                        _platform_mac = True
-            _platform = 0
-            if _platform_windows:
-                _platform |= 1
-            if _platform_mac:
-                _platform |= 2
-            if _platform_linux:
-                _platform |= 4
-            if _platform == 0:
-                _platform = 7
-            game.platform = _platform
-            game.platform_ondisk = _platform
-            game.state = Status.done
-
-            _res = status_query(game.name, game.platform)
-            logger.info(
+            _selected = game.platform
+            if _selected < 0:
+                _selected = (game.platform_available & _user.platform)
+            _res = status_query(game.name, _selected)
+            app.logger.info(
                 "Status check complete for %s. Selected platforms: %s.",
-                game.name, game.platform)
-        if _res is None:
-            logger.error(
-                "No installers returned by GOG for game: %s, platforms: %s.",
-                game.name, game.platform)
+                game.name, _selected)
+        except LoginRequired:
+            _user.state = LoginStatus.logoff
+            _session.commit()
             return
+        except NoResultFound:
+            app.logger.error("Game %s not found in the DB.", game_name)
+            return
+        if _res is None:
+            app.logger.error(
+                "No installers returned by GOG for game: %s, platforms: %s.",
+                game.name, _selected)
+            return
+        # TODO add to platform_ondisk based on the directory scan (after db removal)
         game.done_count = _res[0]
         game.missing_count = _res[1]
         game.update_count = _res[2]
         _session.add(game)
         _session.commit()
     except Exception:
-        logger.error("Unhandled exception in a worker thread!", exc_info=True)
+        app.logger.error("Unhandled exception in a worker thread!",
+                         exc_info=True)
     finally:
         Session.remove()
 
@@ -221,65 +350,62 @@ def status_query(game_name, platform):
     :param string game_name: - the name of a game to download
     :param int platform: - selected platform bitmask
     """
-    # All try block to get stack trace from worker thread
-    try:
-        # Run in GOG library folder
-        os.chdir(config.lgog_library)
-        _found = False  # At leas one installer file returned by GOG API
-        _missing = 0  # Number of missing installer files
-        _update = 0  # Number of installer files that require update
-        _done = 0  # Number of downloaded installer files
-        # Extract file state
-        _re_status = re.compile(r"(\w\w\w?) %s (\S+)" % game_name)
-        _opts = [
-            'lgogdownloader',
-            '--directory', config.lgog_library,
-            '--no-unicode',
-            '--no-color',
-            '--exclude', 'e,c',
-            '--status',
-            '--platform', str(platform),
-            '--game',
-            '^'+game_name+'$'
-        ]
-        logger.debug("Query status: %s", _opts)
-        _proc = Popen(_opts, stdout=PIPE, stderr=PIPE, universal_newlines=True)
-        _full_out = ""
-        while _proc.poll() is None:
-            _out = _proc.stdout.readline()
-            _full_out += _out
-            _m_status = _re_status.search(_out)
-            if _m_status is not None:
-                _found = True
-                _state = _m_status.groups()[0]
-                if _state == "ND" or _state == "FS":
-                    _missing += 1
-                elif _state == "MD5":
-                    _update += 1
-                elif _state == "OK":
-                    _done += 1
-                else:
-                    logger.error("Unknown installer state %s for file: %s",
+    # Run in GOG library folder
+    os.chdir(config.lgog_library)
+    _found = False  # At leas one installer file returned by GOG API
+    _missing = 0  # Number of missing installer files
+    _update = 0  # Number of installer files that require update
+    _done = 0  # Number of downloaded installer files
+    # Extract file state
+    _re_status = re.compile(r"(\w\w\w?) %s (\S+)" % game_name)
+    _opts = [
+        'lgogdownloader',
+        '--directory', config.lgog_library,
+        '--no-unicode',
+        '--no-color',
+        '--exclude', 'e,c',
+        '--status',
+        '--platform', str(platform),
+        '--game',
+        '^'+game_name+'$'
+    ]
+    app.logger.debug("Query status: %s", _opts)
+    _proc = Popen(_opts, stdout=PIPE, stderr=PIPE, universal_newlines=True)
+    _full_out = ""
+    while _proc.poll() is None:
+        _out = _proc.stdout.readline()
+        _full_out += _out
+        _m_status = _re_status.search(_out)
+        if _m_status is not None:
+            _found = True
+            _state = _m_status.groups()[0]
+            if _state == "ND" or _state == "FS":
+                _missing += 1
+            elif _state == "MD5":
+                _update += 1
+            elif _state == "OK":
+                _done += 1
+            else:
+                app.logger.error("Unknown installer state %s for file: %s",
                                  _state, _m_status.groups()[1])
-        # Check return code. If lgogdowloader was not killed by signal Popen
-        # will not rise an exception
-        if _proc.returncode != 0:
-            _err = _proc.stderr.read()
-            raise OSError((
-                _proc.returncode,
-                "lgogdownloader returned non zero exit code."
-                "\nOUT: %s\nERR: %s" %
-                (_full_out, _err)
-                ))
-        if not _found:
-            logger.error("No installers found")
-            return None
-        _result = (_done, _missing, _update)
-        return _result
-    except Exception:
-        logger.error("Status query of %s raised an error",
-                     game_name, exc_info=True)
+    # Check return code. If lgogdowloader was not killed by signal Popen
+    # will not rise an exception
+    if _proc.returncode != 0:
+        _err = _proc.stderr.read()
+        if "Unable to read email and password" in _err:
+            app.logger.warning("Login required.")
+            raise LoginRequired()
+        raise OSError((
+            _proc.returncode,
+            "lgogdownloader returned non zero exit code."
+            "\nOUT: %s\nERR: %s" %
+            (_full_out, _err)
+            ))
+    if not _found:
+        app.logger.error("No installers found")
         return None
+    _result = (_done, _missing, _update)
+    return _result
 
 
 def update():
@@ -291,25 +417,33 @@ def update():
         _session = Session()
         _user = _session.query(User).one()
         if _user.state != LoginStatus.logon:
-            logger.warning("Cannot update cache. User not logged in to GOG.")
+            app.logger.warning(
+                "Cannot update cache. User not logged in to GOG.")
             return
         _opts = [
             'lgogdownloader',
             '--update-cache'
         ]
-        logger.info("Starting cache update: %s", _opts)
-        _proc = Popen(_opts, stdout=PIPE, stderr=PIPE)
-        _out = _proc.communicate(timeout=config.command_timeout)
+        app.logger.info("Starting cache update: %s", _opts)
+        _proc = Popen(_opts, stdout=PIPE, stderr=PIPE, universal_newlines=True)
+        _out, _err = _proc.communicate(timeout=config.command_timeout)
+        # Handle login requests from lgogdownloader
+        if "Unable to read email and password" in _err:
+            app.logger.error("Login required.")
+            _user.state = LoginStatus.logoff
+            _session.commit()
+            _proc.terminate()
+            return
         # Check return code. If lgogdowloader was not killed by signal Popen
         # will not rise an exception
         if _proc.returncode != 0:
             raise OSError((
                 _proc.returncode,
-                "lgogdownloader returned non zero exit code.\n%s" %
-                str(_out)
+                "lgogdownloader returned non zero exit code.\n%s\n%s" %
+                (_out, _err)
                 ))
     except Exception:
-        logger.error("Cache update raised an error", exc_info=True)
+        app.logger.error("Cache update raised an error", exc_info=True)
     finally:
         Session.remove()
 
@@ -322,7 +456,7 @@ def update_loop(pause, function, functargs=()):
     :param function: action to execute
     :param functags: params to the action
     """
-    logger.info("Schedule next event after: %s seconds", pause)
+    app.logger.info("Schedule next event after: %s seconds", pause)
     Timer(pause, update_loop, (pause, function, functargs)).start()
     # Execute the update function
     functargs[0].submit(function)

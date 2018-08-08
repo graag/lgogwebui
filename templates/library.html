@@ -5,84 +5,108 @@
 <script src="/static/js/jquery.min.js"></script>
 <script src="/static/js/lgogwebui.js"></script>
 <body>
-    <!-- Button to open the modal login form -->
-    <button onclick="document.getElementById('id01').style.display='block'">Login</button>
-
     <!-- The Modal -->
     <div id="login" class="modal">
         <span onclick="document.getElementById('login').style.display='none'"
               class="close" title="Close Modal">&times;</span>
 
         <!-- Modal Content -->
-        <form class="modal-content animate" action="/login">
+        <form class="modal-content animate" action="/login" method="post">
             <div class="container">
                 <label for="user"><b>Username</b></label>
                 <input type="text" placeholder="Enter Username" name="user" required>
 
                 <label for="password"><b>Password</b></label>
                 <input type="password" placeholder="Enter Password" name="password" required>
-
-                <button type="submit">Login</button>
             </div>
 
             <div class="container" style="background-color:#f1f1f1">
                 <button type="button" onclick="document.getElementById('login').style.display='none'" class="cancelbtn">Cancel</button>
+                <button type="submit" class="loginbtn">Login</button>
+            </div>
+        </form>
+    </div>
+    <div id="2fa" class="modal">
+        <span onclick="document.getElementById('2fa').style.display='none'"
+              class="close" title="Close Modal">&times;</span>
+
+        <!-- Modal Content -->
+        <form class="modal-content animate" action="/login_2fa" method="post">
+            <div class="container">
+                <label for="code"><b>Security code</b></label>
+                <input type="text" placeholder="Enter security code recieved by email" name="code" required>
+            </div>
+
+            <div class="container" style="background-color:#f1f1f1">
+                <button type="button" onclick="document.getElementById('2fa').style.display='none'" class="cancelbtn">Cancel</button>
+                <button type="submit" class="loginbtn">Login</button>
             </div>
         </form>
     </div>
     <div class="header">
         {% if user.state == "logon" %}
-        <div class="user" id="user_icon"><i class="fas fa-user"></i></div>
+        <div class="user" id="user_icon" onclick="document.getElementById('login').style.display='block'">
+            <span class="tooltip">Logged to GOG.com</span><i class="fas fa-user"></i>
+        </div>
+        {% elif user.state == "running" %}
+        <div class="user" id="user_icon" onclick="document.getElementById('login').style.display='block'">
+            <span class="tooltip">Login in progress ...</span><i class="fas fa-spinner fa-spin"></i>
+        </div>
         {% else %}
-        <div class="user" id="user_icon" onclick="document.getElementById('login').style.display='block'"><i class="fas fa-user-slash"></i></div>
+        <div class="user" id="user_icon" onclick="document.getElementById('login').style.display='block'">
+            <span class="tooltip">GOG.com login required</span><i class="fas fa-user-slash"></i>
+        </div>
         {% endif %}
+        <div class="platform {% if not user.selected.linux %}disabled{% endif %}" id="platform_4" onclick="toggle_default_platform('4')"><i class="fab fa-linux" aria-hidden="true"></i></div>
+        <div class="platform {% if not user.selected.macos %}disabled{% endif %}" id="platform_2" onclick="toggle_default_platform('2')"><i class="fab fa-apple" aria-hidden="true"></i></div>
+        <div class="platform {% if not user.selected.windows %}disabled{% endif %}" id="platform_1" onclick="toggle_default_platform('1')"><i class="fab fa-windows" aria-hidden="true"></i></div>
+        <div class="filter_box">
+            <button type="submit" id="game_clear" onclick="clear_filter()">&times;</button>
+            <input type="text" id="game_filter" class="filter" placeholder="Search..">
+        </div>
     </div>
     {% for game in data %}
     <div class="game" id="{{ game.gamename }}">
         <a name="{{ game.gamename }}"></a>
         <div class="search"><a target="_blank" href="https://www.gog.com/games?search={{ game.title }}"><i class="fas fa-search" aria-hidden="true"></i><a/></div>
-        {% if game.selected.linux %}
-        <div class="platform" id="{{ game.gamename }}_platform_4" onclick="toggle_platform('{{ game.gamename }}', '4')"><i class="fas fa-linux" aria-hidden="true"></i></div>
-        {% elif game.available.linux %}
-        <div class="platform disabled" id="{{ game.gamename }}_platform_4" onclick="toggle_platform('{{ game.gamename }}', '4')"><i class="fas fa-linux" aria-hidden="true"></i></div>
+        {% if not game.available.linux %}
+        <div class="platform invisible" id="{{ game.gamename }}_platform_4"><i class="fab fa-linux" aria-hidden="true"></i></div>
         {% else %}
-        <div class="platform invisible" id="{{ game.gamename }}_platform_4"><i class="fas fa-linux" aria-hidden="true"></i></div>
+        <div class="platform {% if not game.selected.linux %}disabled{% endif %} {% if game.user_selected %}selected{% endif %}" id="{{ game.gamename }}_platform_4" onclick="toggle_platform('{{ game.gamename }}', '4')"><i class="fab fa-linux" aria-hidden="true"></i></div>
         {% endif %}
-        {% if game.selected.macos %}
-        <div class="platform" id="{{ game.gamename }}_platform_2" onclick="toggle_platform('{{ game.gamename }}', '2')"><i class="fas fa-apple" aria-hidden="true"></i></div>
-        {% elif game.available.macos %}
-        <div class="platform disabled" id="{{ game.gamename }}_platform_2" onclick="toggle_platform('{{ game.gamename }}', '2')"><i class="fas fa-apple" aria-hidden="true"></i></div>
+        {% if not game.available.macos %}
+        <div class="platform invisible" id="{{ game.gamename }}_platform_2"><i class="fab fa-apple" aria-hidden="true"></i></div>
         {% else %}
-        <div class="platform invisible" id="{{ game.gamename }}_platform_2"><i class="fas fa-apple" aria-hidden="true"></i></div>
+        <div class="platform {% if not game.selected.macos %}disabled{% endif %} {% if game.user_selected %}selected{% endif %}" id="{{ game.gamename }}_platform_2" onclick="toggle_platform('{{ game.gamename }}', '2')"><i class="fab fa-apple" aria-hidden="true"></i></div>
         {% endif %}
-        {% if game.selected.windows %}
-        <div class="platform" id="{{ game.gamename }}_platform_1" onclick="toggle_platform('{{ game.gamename }}', '1')"><i class="fas fa-windows" aria-hidden="true"></i></div>
-        {% elif game.available.windows %}
-        <div class="platform disabled" id="{{ game.gamename }}_platform_1" onclick="toggle_platform('{{ game.gamename }}', '1')"><i class="fas fa-windows" aria-hidden="true"></i></div>
+        {% if not game.available.windows %}
+        <div class="platform invisible" id="{{ game.gamename }}_platform_1"><i class="fab fa-windows" aria-hidden="true"></i></div>
         {% else %}
-        <div class="platform invisible" id="{{ game.gamename }}_platform_1"><i class="fas fa-windows" aria-hidden="true"></i></div>
+        <div class="platform {% if not game.selected.windows %}disabled{% endif %} {% if game.user_selected %}selected{% endif %}" id="{{ game.gamename }}_platform_1" onclick="toggle_platform('{{ game.gamename }}', '1')"><i class="fab fa-windows" aria-hidden="true"></i></div>
         {% endif %}
         <a target="_blank" href="https://www.gog.com/game/{{ game.gamename }}">
         <div class="icon"><img class="icon" src="{{ game.icon }}" alt=""></div>
         <div class="link">{{ game.title }}</div>
         </a>
         <!-- Game REPO - far right -->
-        <div class="check{% if game.ondisk.linux == 0 and game.ondisk.windows == 0 and game.ondisk.macos == 0 %} hidden{% endif %}"  id="{{ game.gamename }}_repo">
+        <div class="check {% if game.ondisk.linux == 0 and game.ondisk.windows == 0 and game.ondisk.macos == 0 %} hidden{% endif %}"  id="{{ game.gamename }}_repo">
             <a target="_blank" href="/gog-repo/{{ game.gamename }}"><i class="fas fa-archive" aria-hidden="true"></i></a></div>
         <!-- Game download button -->
-        <div class="check{% if game.state == 'running' or game.state == 'queued' or ( game.state == 'done' and game.missing_count == 0 ) %} hidden{% endif %}"
+        <div class="check {% if game.state == 'running' or game.state == 'queued' or game.missing_count == 0 %} hidden{% endif %}"
             id="{{ game.gamename }}_download" onclick="game_download('{{ game.gamename }}')">
             <i class="fas fa-download" aria-hidden="true"></i></a></div>
         <!-- Game update button -->
-        <div class="check{% if game.state == 'running' or game.state == 'queued' or game.update_count == 0 or game.missing_count > 0 %} hidden{% endif %}"
+        <div class="check {% if game.state == 'running' or game.state == 'queued' or game.update_count == 0 or game.missing_count > 0 %} hidden{% endif %}"
             id="{{ game.gamename }}_update" onclick="game_download('{{ game.gamename }}')">
             <i class="fas fa-download" aria-hidden="true"></i></a></div>
         <!-- Spinner -->
-        <div class="check{% if game.state != 'running' and game.state != 'queued' %} hidden{% endif %}" id="{{ game.gamename }}_spinner">
+        <div class="check {% if game.state != 'running' and game.state != 'queued' %} hidden{% endif %}" id="{{ game.gamename }}_spinner"
+            onclick="game_stop('{{ game.gamename }}')">
             <i class="fas fa-spinner fa-spin" aria-hidden="true"></i></div>
         <!-- Progress -->
-        <div class="check{% if game.state != 'running' and game.state != 'queued' %} hidden{% endif %}" id="{{ game.gamename }}_progress">
+        <div class="check {% if game.state != 'running' and game.state != 'queued' %} hidden{% endif %}" id="{{ game.gamename }}_progress">
             <span>{{ game.progress }} %</span></div>
+        <div class="check invisible"><span>|</span></div>
     </div>
     {% endfor %}
 </body>

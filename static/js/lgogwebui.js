@@ -1,7 +1,11 @@
 var active_games = []
+var user_status = ""
 
 function toggle_platform(game, platform) {
     $.get("/platform/"+game+"/"+platform, function(data){
+        $("#"+game+"_platform_1").addClass("selected");
+        $("#"+game+"_platform_2").addClass("selected");
+        $("#"+game+"_platform_4").addClass("selected");
         $("#"+game+"_platform_"+platform).toggleClass("disabled");
         console.log( "Toggle result: " + data )
         if(data.missing) {
@@ -11,6 +15,26 @@ function toggle_platform(game, platform) {
         }
     })
     .fail(function(jqXHR, textStatus, errorThrown) {
+        console.log(textStatus)
+        alert( textStatus );
+    });
+}
+
+function toggle_default_platform(platform) {
+    $.get("/default_platform/"+platform, function(data){
+        $("#platform_"+platform).toggleClass("disabled");
+        Object.keys(data).forEach(function(game) {
+            console.log( "Toggle " + game + " :missing=" + data[game].missing )
+            $("#"+game+"_platform_"+platform).toggleClass("disabled");
+            if(data[game].missing) {
+                $("#"+game+"_download").show();
+            } else {
+                $("#"+game+"_download").hide();
+            }
+        })
+    })
+    .fail(function(jqXHR, textStatus, errorThrown) {
+        console.log(textStatus)
         alert( textStatus );
     });
 }
@@ -25,12 +49,31 @@ function game_download(game) {
         $("#"+game+"_download").hide();
         $("#"+game+"_update").hide();
     })
-    .fail(function(data) {
-        alert( data );
+    .fail(function(jqXHR, textStatus, errorThrown) {
+        console.log(textStatus)
+        alert( textStatus );
     });
 }
 
-function executeQuery() {
+function game_stop(game) {
+    console.log( "stop download" );
+    $.get("/stop/"+game, function(data){
+        console.log( "stop requested" );
+        $("#"+game+"_progress").hide();
+        $("#"+game+"_spinner").hide();
+        $("#"+game+"_download").show();
+        $("#"+game+"_update").hide();
+        $("#"+game+"_repo").show();
+        const index = active_games.indexOf(game);
+        active_games.splice(index, 1);
+    })
+    .fail(function(jqXHR, textStatus, errorThrown) {
+        console.log(textStatus)
+        alert( textStatus );
+    });
+}
+
+function execute_query() {
     console.log("Query active downloads: " + active_games);
     if(active_games.length > 0) {
         $.ajax({
@@ -60,10 +103,76 @@ function executeQuery() {
             }
         });
     }
-    setTimeout(executeQuery, 5000); // you could choose not to continue on failure...
+    $.get("/user_status", function(data){
+        if(user_status != data.user_status) {
+            console.log(data.user_status)
+            user_status = data.user_status
+            if(data.user_status === "running_2fa") {
+                $("#user_icon").find("i").attr('class','fas fa-spinner fa-spin');
+                $("#user_icon").find("span").text("Login in progress ...");
+                document.getElementById('2fa').style.display='block'
+            } else if (data.user_status === "logon") {
+                $("#user_icon").find("i").attr('class','fas fa-user');
+                $("#user_icon").find("span").text("Logged to GOG.com");
+            } else if (data.user_status === "recaptcha") {
+                $("#user_icon").find("i").attr('class','far fa-clock');
+                $("#user_icon").find("span").text("Login requires solving reCAPTCHA. Try again later ...");
+            } else if (data.user_status === "running") {
+                $("#user_icon").find("i").attr('class','fas fa-spinner fa-spin');
+                $("#user_icon").find("span").text("Login in progress ...");
+            } else {
+                $("#user_icon").find("i").attr('class','fas fa-user-slash');
+                $("#user_icon").find("span").text("GOG.com login required");
+                document.getElementById('login').style.display='block'
+            }
+        }
+    })
+    .fail(function(jqXHR, textStatus, errorThrown) {
+        console.log(jqXHR)
+        console.log(textStatus)
+        console.log(errorThrown)
+        alert( textStatus );
+    });
+    setTimeout(execute_query, 5000); // you could choose not to continue on failure...
+}
+
+function filter_games(){
+    var $games = $(".game");
+
+    $('#game_filter').keyup(function(){
+        var val = '^(?=.*\\b' + $.trim($(this).val()).split(/\s+/).join('\\b)(?=.*\\b') + ').*$',
+        reg = RegExp(val, 'i'),
+        text;
+
+        $games.show().filter(function(){
+            text = $(this).text().replace(/\s+/g, ' ');
+            return !reg.test(text);
+        }).hide();
+
+        $('#game_clear').show()
+    });
+}
+
+function clear_filter(){
+    $('#game_filter').val('')
+    $('#game_clear').hide()
+    $(".game").show()
 }
 
 $(document).ready(function() {
+    // Get the modal
+    var modal = document.getElementById('login');
+    var modal2 = document.getElementById('2fa');
+
+    // When the user clicks anywhere outside of the modal, close it
+    window.onclick = function(event) {
+        if (event.target == modal) {
+            modal.style.display = "none";
+        }
+        if (event.target == modal2) {
+            modal2.style.display = "none";
+        }
+    }
     $.ajax({
         url: '/status',
         success: function(data) {
@@ -74,6 +183,7 @@ $(document).ready(function() {
     .fail(function() {
         alert( "error" );
     });
+    filter_games();
     // run the first time; all subsequent calls will take care of themselves
-    setTimeout(executeQuery, 5000);
+    setTimeout(execute_query, 5000);
 });

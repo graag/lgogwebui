@@ -27,6 +27,7 @@ class Status(enum.Enum):
     done = 4
     missing = 5
     failed = 6
+    stop = 7
 
 
 class LoginStatus(enum.Enum):
@@ -37,7 +38,8 @@ class LoginStatus(enum.Enum):
     running = 2
     running_2fa = 3
     recaptcha = 4
-    logon = 5
+    failed = 5
+    logon = 6
 
 
 class Game(Base):
@@ -49,7 +51,9 @@ class Game(Base):
     #: lgogdowloader game name
     name = Column(String(250), nullable=False)
     #: bitmask defining selected platforms
-    platform = Column(Integer, nullable=False)
+    platform = Column(Integer, default=-1, nullable=False)
+    #: bitmask defining available platforms
+    platform_available = Column(Integer, default=0, nullable=False)
     #: bitmask defining downloaded platforms
     platform_ondisk = Column(Integer, default=0)
     #: download progress
@@ -72,6 +76,8 @@ class User(Base):
     user_id = Column(Integer, primary_key=True)
     #: login state
     state = Column(Enum(LoginStatus), default=LoginStatus.logoff)
+    #: bitmask defining selected platforms
+    platform = Column(Integer, default=4)
 
 
 # Create an engine that stores data in a sqlte db file.
