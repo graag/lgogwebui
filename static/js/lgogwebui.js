@@ -1,5 +1,6 @@
 var active_games = []
 var user_status = ""
+var download_filter = false
 
 function toggle_platform(game, platform) {
     $.get("/platform/"+game+"/"+platform, function(data){
@@ -100,6 +101,15 @@ function execute_query() {
                         active_games.splice(index, 1);
                     }
                 });
+                if(active_games.length > 0) {
+                    $("#download_count").text(active_games.length.toString());
+                    $("#download_status").show();
+                } else {
+                    $("#download_count").text("0");
+                    if(!download_filter) {
+                        $("#download_status").hide();
+                    }
+                }
             }
         });
     }
@@ -150,6 +160,7 @@ function filter_games(){
         }).hide();
 
         $('#game_clear').show()
+        download_filter = false
     });
 }
 
@@ -157,6 +168,23 @@ function clear_filter(){
     $('#game_filter').val('')
     $('#game_clear').hide()
     $(".game").show()
+}
+
+function filter_downloads(){
+    if(download_filter) {
+        download_filter = false
+        $(".game").show()
+        if(active_games.length == 0) {
+            $("#download_status").hide();
+        }
+    } else {
+        clear_filter()
+        download_filter = true
+        $(".game").hide()
+        active_games.forEach(function(game) {
+            $("#" + game).show()
+        })
+    }
 }
 
 $(document).ready(function() {

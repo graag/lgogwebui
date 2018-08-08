@@ -63,6 +63,10 @@
         <div class="filter_box">
             <button type="submit" id="game_clear" onclick="clear_filter()">&times;</button>
             <input type="text" id="game_filter" class="filter" placeholder="Search..">
+            <div class="download" id="download_status" onclick="filter_downloads()">
+                <span id="download_count">0</span>
+                <i class="far fa-arrow-alt-circle-down" aria-hidden="true"></i>
+            </div>
         </div>
     </div>
     {% for game in data %}
