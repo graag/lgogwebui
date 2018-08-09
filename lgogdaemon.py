@@ -11,6 +11,7 @@ from subprocess import Popen, PIPE
 from threading import Timer
 from queue import Queue
 from time import sleep
+from datetime import datetime
 from sqlalchemy.orm.exc import NoResultFound
 
 import config
@@ -138,6 +139,9 @@ def login(user, password):
         if _result == 3:
             _user.state = LoginStatus.logon
             app.logger.info("Login successful")
+            if not os.path.isfile(os.path.join(
+                config.lgog_cache, 'gamedetails.json')):
+                update()
         else:
             _user.state = LoginStatus.failed
             app.logger.warning("Login failed")
@@ -287,9 +291,13 @@ def status(game_name):
     # All try block to get stack trace from worker thread
     try:
         app.logger.debug("Check game status: %s", game_name)
-        with open(os.path.join(config.lgog_cache, 'gamedetails.json'),
-                  encoding='utf-8') as _file:
-            data = json.load(_file)
+        try:
+            with open(os.path.join(config.lgog_cache, 'gamedetails.json'),
+                      encoding='utf-8') as _file:
+                data = json.load(_file)
+        except FileNotFoundError:
+            app.logger.error("The lgogdownloader cache is missing.")
+            return
         if data is None:
             app.logger.error("Game not found in lgogdownloader cache: %s",
                              game_name)
@@ -404,6 +412,7 @@ def status_query(game_name, platform):
     if not _found:
         app.logger.error("No installers found")
         return None
+    app.logger.debug(_full_out)
     _result = (_done, _missing, _update)
     return _result
 
@@ -442,6 +451,8 @@ def update():
                 "lgogdownloader returned non zero exit code.\n%s\n%s" %
                 (_out, _err)
                 ))
+        _user.last_update = datetime.utcnow()
+        _session.commit()
     except Exception:
         app.logger.error("Cache update raised an error", exc_info=True)
     finally:

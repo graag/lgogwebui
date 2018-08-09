@@ -1,6 +1,7 @@
 var active_games = []
 var user_status = ""
 var download_filter = false
+var timestamp = 0
 
 function toggle_platform(game, platform) {
     $.get("/platform/"+game+"/"+platform, function(data){
@@ -75,8 +76,8 @@ function game_stop(game) {
 }
 
 function execute_query() {
-    console.log("Query active downloads: " + active_games);
     if(active_games.length > 0) {
+        console.log("Query active downloads: " + active_games);
         $.ajax({
             url: '/status',
             type: 'POST',
@@ -114,6 +115,12 @@ function execute_query() {
         });
     }
     $.get("/user_status", function(data){
+        if(data.last_update == 0) {
+            $("#loading").show()
+        } else if (data.last_update > timestamp) {
+            console.log("Cache updated. Reload page")
+            location.reload();
+        }
         if(user_status != data.user_status) {
             console.log(data.user_status)
             user_status = data.user_status
@@ -188,6 +195,7 @@ function filter_downloads(){
 }
 
 $(document).ready(function() {
+    timestamp = Math.floor(new Date().getTime() / 1000)
     // Get the modal
     var modal = document.getElementById('login');
     var modal2 = document.getElementById('2fa');

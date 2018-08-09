@@ -8,6 +8,7 @@ import enum
 import config
 
 from sqlalchemy import Column, Integer, String, Enum
+from sqlalchemy.types import TIMESTAMP
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker, scoped_session
 from sqlalchemy import create_engine
@@ -78,6 +79,8 @@ class User(Base):
     state = Column(Enum(LoginStatus), default=LoginStatus.logoff)
     #: bitmask defining selected platforms
     platform = Column(Integer, default=4)
+    #: UTC timestamp of last cache update
+    last_update = Column(TIMESTAMP)
 
 
 # Create an engine that stores data in a sqlte db file.

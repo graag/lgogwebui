@@ -25,8 +25,8 @@ import models
 from models import Game, User, LoginStatus, Status, Session
 
 app = main.app
-download_scheduler = ThreadPoolExecutor(max_workers=1)
-update_scheduler = ThreadPoolExecutor(max_workers=1)
+download_scheduler = ThreadPoolExecutor(max_workers=2)
+update_scheduler = ThreadPoolExecutor(max_workers=2)
 # Create instance of AutoIndex used to display contents of game download
 # directory. Explicitely disable add_url_rules as it would define some default
 # routes for "/"
@@ -75,11 +75,16 @@ def library():
     """Display the main page."""
     _session = Session()
     # TODO store in some cache
-    with open(os.path.join(
-              config.lgog_cache, 'gamedetails.json'), encoding='utf-8') as f:
-        data = json.load(f)
-    if data is None:
-        return "Unable to load the GOG games database.", 500
+    data = {
+        'games': []
+    }
+    try:
+        with open(os.path.join(
+                  config.lgog_cache, 'gamedetails.json'),
+                  encoding='utf-8') as f:
+            data = json.load(f)
+    except FileNotFoundError:
+        pass
 
     _user = _session.query(User).one()
     _user_data = {
@@ -114,10 +119,37 @@ def library():
                 _session.add(db_game)
             # app.logger.debug("Game in DB: %s", db_game.name)
         except NoResultFound:
+            _name = game_data['gamename']
             db_game = Game()
-            db_game.name = game_data['gamename']
+            db_game.name = _name
             db_game.state = Status.new
             db_game.platform_available = _available
+            _game_dir = os.path.join(config.lgog_library, _name)
+            if os.path.isdir(_game_dir):
+                _platform_linux = False
+                _platform_mac = False
+                _platform_windows = False
+                # Search for downloaded installers
+                for _file in os.listdir(_game_dir):
+                    if not os.path.isdir(os.path.join(_game_dir, _file)):
+                        if _file.endswith('.sh'):
+                            _platform_linux = True
+                        elif _file.endswith('.exe'):
+                            _platform_windows = True
+                        elif _file.endswith('.pkg'):
+                            _platform_mac = True
+                        elif _file.endswith('.dmg'):
+                            _platform_mac = True
+                _platform = 0
+                if _platform_windows:
+                    _platform |= 1
+                if _platform_mac:
+                    _platform |= 2
+                if _platform_linux:
+                    _platform |= 4
+                if _platform > 0:
+                    db_game.platform_ondisk = _platform
+                    db_game.state = Status.done
             _session.add(db_game)
         _session.commit()
 
@@ -351,8 +383,14 @@ def user_status():
     """
     _session = Session()
     _user = _session.query(User).one()
+    _last_update = _user.last_update
+    if _last_update is not None:
+        _last_update = int(_last_update.timestamp())
+    else:
+        _last_update = 0
     result = {
-            'user_status': _user.state.name
+            'user_status': _user.state.name,
+            'last_update': _last_update
             }
     return jsonify(result)
 
@@ -364,7 +402,7 @@ def login():
     """
     user = request.form['user']
     password = request.form['password']
-    download_scheduler.submit(lgogdaemon.login, user, password)
+    update_scheduler.submit(lgogdaemon.login, user, password)
     return redirect(url_for('library'))
 
 

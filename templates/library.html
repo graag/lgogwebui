@@ -69,6 +69,10 @@
             </div>
         </div>
     </div>
+    <div class="message" id="loading">
+        <i class="fas fa-spinner fa-spin" aria-hidden="true"></i>
+        Waiting for GOG.com cache update to finish ...
+    </div>
     {% for game in data %}
     <div class="game" id="{{ game.gamename }}">
         <a name="{{ game.gamename }}"></a>
