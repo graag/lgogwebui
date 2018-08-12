@@ -1,7 +1,2 @@
-- Set progress to 100% of download finish
 - Add handlers for:
   - broken network connection
-  - wrong game name
-  - bad login credentials
-- Add global platform toggles
-- Add UI login dialog
