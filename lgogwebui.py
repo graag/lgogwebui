@@ -70,7 +70,7 @@ def session_cleaner(response):
     return response
 
 
-@app.route('/')
+@app.route('%s/' % config.root_url)
 def library():
     """Display the main page."""
     _session = Session()
@@ -193,10 +193,10 @@ def library():
         _session.commit()
 
     # app.logger.debug(_metadata)
-    return render_template('library.html', data=_metadata, user=_user_data)
+    return render_template('library.html', data=_metadata, user=_user_data, root_url=config.root_url)
 
 
-@app.route('/platform/<game>/<platform>')
+@app.route('%s/platform/<game>/<platform>' % config.root_url)
 def toggle_platform(game, platform):
     """
     Toggle active state of platfrom for a game.
@@ -250,7 +250,7 @@ def toggle_platform(game, platform):
     return jsonify(_result)
 
 
-@app.route('/default_platform/<platform>')
+@app.route('%s/default_platform/<platform>' % config.root_url)
 def toggle_default_platform(platform):
     """
     Toggle active state of platfrom for a game.
@@ -297,7 +297,7 @@ def toggle_default_platform(platform):
     return jsonify(_result)
 
 
-@app.route('/download/<game>')
+@app.route('%s/download/<game>' % config.root_url)
 def download(game):
     """
     Request game download
@@ -319,7 +319,7 @@ def download(game):
     return "OK"
 
 
-@app.route('/stop/<game>')
+@app.route('%s/stop/<game>' % config.root_url)
 def stop(game):
     """
     Stop game download
@@ -338,7 +338,7 @@ def stop(game):
     return "OK"
 
 
-@app.route('/status', methods=['GET'])
+@app.route('%s/status' % config.root_url, methods=['GET'])
 def status_all():
     """
     Get status of all active downloads.
@@ -351,7 +351,7 @@ def status_all():
     return jsonify(result)
 
 
-@app.route('/status', methods=['POST'])
+@app.route('%s/status' % config.root_url, methods=['POST'])
 def status_selected():
     """
     Get status of selected downloads.
@@ -378,7 +378,7 @@ def status_selected():
     return jsonify(result)
 
 
-@app.route('/user_status', methods=['GET'])
+@app.route('%s/user_status' % config.root_url, methods=['GET'])
 def user_status():
     """
     Get status of user session
@@ -397,7 +397,7 @@ def user_status():
     return jsonify(result)
 
 
-@app.route('/login', methods=['POST'])
+@app.route('%s/login' % config.root_url, methods=['POST'])
 def login():
     """
     Execute login to GOG.com
@@ -408,7 +408,7 @@ def login():
     return redirect(url_for('library'))
 
 
-@app.route('/login_2fa', methods=['POST'])
+@app.route('%s/login_2fa' % config.root_url, methods=['POST'])
 def login_2fa():
     """
     Set 2FA code for GOG.com
@@ -423,7 +423,7 @@ def login_2fa():
     return redirect(url_for('library'))
 
 
-@app.route('/gog-repo/<path:path>')
+@app.route('%s/gog-repo/<path:path>' % config.root_url)
 def browse(path):
     """
     Load directory view for selected path.

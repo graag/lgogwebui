@@ -2,9 +2,10 @@ var active_games = []
 var user_status = ""
 var download_filter = false
 var timestamp = 0
+var root_url = ""
 
 function toggle_platform(game, platform) {
-    $.get("/platform/"+game+"/"+platform, function(data){
+    $.get(root_url+"/platform/"+game+"/"+platform, function(data){
         $("#"+game+"_platform_1").addClass("selected");
         $("#"+game+"_platform_2").addClass("selected");
         $("#"+game+"_platform_4").addClass("selected");
@@ -23,7 +24,7 @@ function toggle_platform(game, platform) {
 }
 
 function toggle_default_platform(platform) {
-    $.get("/default_platform/"+platform, function(data){
+    $.get(root_url+"/default_platform/"+platform, function(data){
         $("#platform_"+platform).toggleClass("disabled");
         Object.keys(data).forEach(function(game) {
             console.log( "Toggle " + game + " :missing=" + data[game].missing )
@@ -43,7 +44,7 @@ function toggle_default_platform(platform) {
 
 function game_download(game) {
     console.log( "start download" );
-    $.get("/download/"+game, function(data){
+    $.get(root_url+"/download/"+game, function(data){
         console.log( "download scheduled" );
         active_games.push(game)
         $("#"+game+"_progress").show();
@@ -59,7 +60,7 @@ function game_download(game) {
 
 function game_stop(game) {
     console.log( "stop download" );
-    $.get("/stop/"+game, function(data){
+    $.get(root_url+"/stop/"+game, function(data){
         console.log( "stop requested" );
         $("#"+game+"_progress").hide();
         $("#"+game+"_spinner").hide();
@@ -79,7 +80,7 @@ function execute_query() {
     if(active_games.length > 0) {
         console.log("Query active downloads: " + active_games);
         $.ajax({
-            url: '/status',
+            url: root_url+'/status',
             type: 'POST',
             data: JSON.stringify(active_games),
             contentType: 'application/json; charset=utf-8',
@@ -114,7 +115,7 @@ function execute_query() {
             }
         });
     }
-    $.get("/user_status", function(data){
+    $.get(root_url+"/user_status", function(data){
         if(data.last_update == 0) {
             $("#loading").show()
         } else if (data.last_update > timestamp) {
@@ -210,7 +211,7 @@ $(document).ready(function() {
         }
     }
     $.ajax({
-        url: '/status',
+        url: root_url+'/status',
         success: function(data) {
             active_games = data;
             console.log("Current active downloads: " + active_games);

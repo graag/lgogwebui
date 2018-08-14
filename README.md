@@ -41,6 +41,7 @@ Settings
 Following environment variables govern lgogwebui behaviour:
 - LGOG_CONFIG: Path to lgogdownloader config (default: "~/.config/lgogdownloader")
 - LGOG_CACHE: Path to lgogdownloader cache (default: "~/.cache/lgogdownloader")
+- LGOG_URL: Base url when running behind reverse proxy.
 - GOG_DIR: Path to GOG game library (default: "~/GOG")
 
 The lgogdownloader settings can be adjusted by modifing the ~/.config/lgogdownloader/config.cfg.
