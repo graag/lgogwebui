@@ -2,6 +2,9 @@
 <link rel="stylesheet" href="{{ root_url }}/static/css/lgogui.css" />
 <link rel="stylesheet" type="text/css" href="//fonts.googleapis.com/css?family=Lato" />
 <link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.2.0/css/all.css" integrity="sha384-hWVjflwFxL6sNzntih27bfxkr27PmbbK/iSvJ+a4+0owXq79v+lsFkW54bOGbiDQ" crossorigin="anonymous">
+<script type="text/javascript">
+var root_url = "{{ root_url }}"
+</script>
 <script src="{{ root_url }}/static/js/jquery.min.js"></script>
 <script src="{{ root_url }}/static/js/lgogwebui.js"></script>
 <body>
@@ -11,7 +14,7 @@
               class="close" title="Close Modal">&times;</span>
 
         <!-- Modal Content -->
-        <form class="modal-content animate" action="/login" method="post">
+        <form class="modal-content animate" action="{{ root_url }}/login" method="post">
             <div class="container">
                 <label for="user"><b>Username</b></label>
                 <input type="text" placeholder="Enter Username" name="user" required>
@@ -31,7 +34,7 @@
               class="close" title="Close Modal">&times;</span>
 
         <!-- Modal Content -->
-        <form class="modal-content animate" action="/login_2fa" method="post">
+        <form class="modal-content animate" action="{{ root_url }}/login_2fa" method="post">
             <div class="container">
                 <label for="code"><b>Security code</b></label>
                 <input type="text" placeholder="Enter security code recieved by email" name="code" required>
@@ -98,7 +101,7 @@
         </a>
         <!-- Game REPO - far right -->
         <div class="check {% if game.ondisk.linux == 0 and game.ondisk.windows == 0 and game.ondisk.macos == 0 %} hidden{% endif %}"  id="{{ game.gamename }}_repo">
-            <a target="_blank" href="/gog-repo/{{ game.gamename }}"><i class="fas fa-archive" aria-hidden="true"></i></a></div>
+            <a target="_blank" href="{{ root_url }}/gog-repo/{{ game.gamename }}"><i class="fas fa-archive" aria-hidden="true"></i></a></div>
         <!-- Game download button -->
         <div class="check {% if game.state == 'running' or game.state == 'queued' or game.missing_count == 0 %} hidden{% endif %}"
             id="{{ game.gamename }}_download" onclick="game_download('{{ game.gamename }}')">
@@ -117,10 +120,5 @@
         <div class="check invisible"><span>|</span></div>
     </div>
     {% endfor %}
-    <script type="text/javascript">
-$(document).ready(function() {
-    root_url = {{ root_url }}
-})
-    </script>
 </body>
 </html>

@@ -2,7 +2,6 @@ var active_games = []
 var user_status = ""
 var download_filter = false
 var timestamp = 0
-var root_url = ""
 
 function toggle_platform(game, platform) {
     $.get(root_url+"/platform/"+game+"/"+platform, function(data){
