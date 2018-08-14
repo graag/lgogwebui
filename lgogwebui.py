@@ -150,6 +150,8 @@ def library():
                 if _platform > 0:
                     db_game.platform_ondisk = _platform
                     db_game.state = Status.done
+                    if (_platform & _user.platform) == 0:
+                        db_game.platform = _platform
             _session.add(db_game)
         _session.commit()
 
