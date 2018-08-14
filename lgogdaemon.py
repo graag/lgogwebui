@@ -183,7 +183,7 @@ def download(game_name):
         # Extract progress for active file
         _re_progress = re.compile(r"(\d+)%.*ETA")
         # Extract number of files in queue
-        _re_remain = re.compile(r"Remaining:.*(\d+)")
+        _re_remain = re.compile(r"Remaining:\s+(\d+)")
         game.state = Status.running
         _session.commit()
         app.logger.debug("Game %s state changed to running", game.name)
