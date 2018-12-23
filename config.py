@@ -8,8 +8,8 @@ lgog_config = os.path.expanduser(os.environ.get("LGOG_CONFIG", "~/.config/lgogdo
 lgog_cache = os.path.expanduser(os.environ.get("LGOG_CACHE", "~/.cache/lgogdownloader"))
 #: Path to GOG game library
 lgog_library = os.path.expanduser(os.environ.get("GOG_DIR", "~/GOG"))
-#: Root URL - set when behind reverse proxy
-root_url = os.environ.get("LGOG_URL", "")
+#: Script name - set when behind reverse proxy
+script_name = os.environ.get("SCRIPT_NAME", "")
 #: Wait for 10 minutes until command is finished
 command_timeout = 600
 #: Time between updates

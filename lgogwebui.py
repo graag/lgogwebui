@@ -18,8 +18,8 @@ from flask_autoindex import AutoIndex
 from sqlalchemy.orm.exc import NoResultFound
 from sqlalchemy import or_
 
-import config
 import main
+import config
 import lgogdaemon
 import models
 from models import Game, User, LoginStatus, Status, Session
@@ -70,7 +70,7 @@ def session_cleaner(response):
     return response
 
 
-@app.route('%s/' % config.root_url)
+@app.route('/')
 def library():
     """Display the main page."""
     _session = Session()
@@ -193,10 +193,11 @@ def library():
         _session.commit()
 
     # app.logger.debug(_metadata)
-    return render_template('library.html', data=_metadata, user=_user_data, root_url=config.root_url)
+    _root = request.environ['SCRIPT_NAME'] or ''
+    return render_template('library.html', data=_metadata, user=_user_data, root_url=_root)
 
 
-@app.route('%s/platform/<game>/<platform>' % config.root_url)
+@app.route('/platform/<game>/<platform>')
 def toggle_platform(game, platform):
     """
     Toggle active state of platfrom for a game.
@@ -250,7 +251,7 @@ def toggle_platform(game, platform):
     return jsonify(_result)
 
 
-@app.route('%s/default_platform/<platform>' % config.root_url)
+@app.route('/default_platform/<platform>')
 def toggle_default_platform(platform):
     """
     Toggle active state of platfrom for a game.
@@ -297,7 +298,7 @@ def toggle_default_platform(platform):
     return jsonify(_result)
 
 
-@app.route('%s/download/<game>' % config.root_url)
+@app.route('/download/<game>')
 def download(game):
     """
     Request game download
@@ -319,7 +320,7 @@ def download(game):
     return "OK"
 
 
-@app.route('%s/stop/<game>' % config.root_url)
+@app.route('/stop/<game>')
 def stop(game):
     """
     Stop game download
@@ -338,7 +339,7 @@ def stop(game):
     return "OK"
 
 
-@app.route('%s/status' % config.root_url, methods=['GET'])
+@app.route('/status', methods=['GET'])
 def status_all():
     """
     Get status of all active downloads.
@@ -351,7 +352,7 @@ def status_all():
     return jsonify(result)
 
 
-@app.route('%s/status' % config.root_url, methods=['POST'])
+@app.route('/status', methods=['POST'])
 def status_selected():
     """
     Get status of selected downloads.
@@ -378,7 +379,7 @@ def status_selected():
     return jsonify(result)
 
 
-@app.route('%s/user_status' % config.root_url, methods=['GET'])
+@app.route('/user_status', methods=['GET'])
 def user_status():
     """
     Get status of user session
@@ -397,7 +398,7 @@ def user_status():
     return jsonify(result)
 
 
-@app.route('%s/login' % config.root_url, methods=['POST'])
+@app.route('/login', methods=['POST'])
 def login():
     """
     Execute login to GOG.com
@@ -408,7 +409,7 @@ def login():
     return redirect(url_for('library'))
 
 
-@app.route('%s/login_2fa' % config.root_url, methods=['POST'])
+@app.route('/login_2fa', methods=['POST'])
 def login_2fa():
     """
     Set 2FA code for GOG.com
@@ -423,7 +424,7 @@ def login_2fa():
     return redirect(url_for('library'))
 
 
-@app.route('%s/gog-repo/<path:path>' % config.root_url)
+@app.route('/gog-repo/<path:path>')
 def browse(path):
     """
     Load directory view for selected path.
