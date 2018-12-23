@@ -364,6 +364,10 @@ def status_query(game_name, platform):
     _missing = 0  # Number of missing installer files
     _update = 0  # Number of installer files that require update
     _done = 0  # Number of downloaded installer files
+    if platform == 0:
+        app.logger.error("No platform selected")
+        _result = (_done, _missing, _update)
+        return _result
     # Extract file state
     _re_status = re.compile(r"(\w\w\w?) %s (\S+)" % game_name)
     _opts = [
